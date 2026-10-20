@@ -273,6 +273,7 @@ export function demoSections(
 ) {
   const bride = type === 'bride';
   const district2 = DISTRICTS[(i * 11) % DISTRICTS.length].value;
+  const placeName = DISTRICTS.find((x) => x.value === district).en;
   return {
     general: {
       biodataType: type,
@@ -293,7 +294,7 @@ export function demoSections(
       ...(profession === 'abroad'
         ? { presentCountry: 'United Kingdom' }
         : { presentDistrict: i % 3 ? district : 'dhaka' }),
-      grewUpAt: `${district.charAt(0).toUpperCase()}${district.slice(1)} town`,
+      grewUpAt: `${placeName} town`,
     },
     education: {
       educationMedium: 'general',
@@ -329,7 +330,7 @@ export function demoSections(
     occupation: {
       profession,
       jobTitle: job,
-      occupationDetails: `Working as ${job.toLowerCase()} for ${(i % 6) + 1} years.`,
+      occupationDetails: `Has worked in this role for ${(i % 6) + 1} years.`,
       monthlyIncome: ['40k_70k', '70k_100k', '20k_40k', '100k_200k'][i % 4],
     },
     marriage: {
@@ -343,7 +344,7 @@ export function demoSections(
       careerAfterMarriage: bride
         ? 'I would like to continue my career after marriage.'
         : 'I support my partner continuing her studies or career.',
-      residenceAfterMarriage: `In ${district === 'dhaka' ? 'Dhaka' : 'Dhaka or my home district'}.`,
+      residenceAfterMarriage: district === 'dhaka' ? 'In Dhaka.' : `In Dhaka or ${placeName}.`,
       thoughtsOnMarriage: 'Marriage is a lifelong partnership built on trust, respect and friendship.',
     },
     partner: {
@@ -354,7 +355,7 @@ export function demoSections(
       religions: [religion],
       maritalStatuses: ['never_married'],
       minEducation: 'bachelor',
-      districts: `${district}, ${district2}`,
+      districts: [district, district2].map((d) => DISTRICTS.find((x) => x.value === d).en).join(', '),
       profession: 'Any respectable profession',
       economicStatus: ['middle', 'upper_middle'],
       qualities: 'Kind, honest, family-oriented and respectful towards both families.',

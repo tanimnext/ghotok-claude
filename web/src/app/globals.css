@@ -253,3 +253,10 @@ html[lang='bn'] {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Letter-spacing breaks Bangla conjuncts, so tracking is turned off for Bangla text.
+   (Unlayered, so it wins over Tailwind's tracking-* utilities.) */
+html[lang='bn'] .kicker,
+html[lang='bn'] [class*='tracking-'] {
+  letter-spacing: normal;
+}

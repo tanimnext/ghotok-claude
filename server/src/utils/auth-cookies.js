@@ -6,6 +6,9 @@ import { env } from '../config/env.js';
 
 export const ACCESS_COOKIE = 'gh_at';
 export const REFRESH_COOKIE = 'gh_rt';
+// Not a secret: a readable flag that tells the front-ends a session exists, so
+// anonymous visitors never make a pointless /auth/me request.
+export const SESSION_HINT_COOKIE = 'gh_session';
 const REFRESH_PATH = '/api/auth';
 
 function baseOptions() {
@@ -24,17 +27,16 @@ export function setAuthCookies(res, { accessToken, refreshToken }) {
     maxAge: env.ACCESS_TOKEN_TTL_MIN * 60e3,
   });
   if (refreshToken) {
-    res.cookie(REFRESH_COOKIE, refreshToken, {
-      ...baseOptions(),
-      path: REFRESH_PATH,
-      maxAge: env.REFRESH_TOKEN_TTL_DAYS * 864e5,
-    });
+    const maxAge = env.REFRESH_TOKEN_TTL_DAYS * 864e5;
+    res.cookie(REFRESH_COOKIE, refreshToken, { ...baseOptions(), path: REFRESH_PATH, maxAge });
+    res.cookie(SESSION_HINT_COOKIE, '1', { ...baseOptions(), httpOnly: false, path: '/', maxAge });
   }
 }
 
 export function clearAuthCookies(res) {
   res.clearCookie(ACCESS_COOKIE, { ...baseOptions(), path: '/' });
   res.clearCookie(REFRESH_COOKIE, { ...baseOptions(), path: REFRESH_PATH });
+  res.clearCookie(SESSION_HINT_COOKIE, { ...baseOptions(), httpOnly: false, path: '/' });
 }
 
 /** The access token from the Authorization header or the cookie. */
