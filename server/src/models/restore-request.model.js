@@ -11,6 +11,8 @@ const restoreRequestSchema = new Schema(
     reason: { type: String, maxlength: 1000 },
     status: { type: String, enum: optionValues(RESTORE_STATUS), default: 'pending', index: true },
     note: { type: String, maxlength: 500 },
+    // A permanent decline stops the member from asking again.
+    permanent: { type: Boolean, default: false },
     decidedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     decidedAt: Date,
   },

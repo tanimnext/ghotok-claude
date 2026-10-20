@@ -17,6 +17,10 @@ export const DEFAULT_SETTINGS = {
   },
   payments: {
     verificationHours: 6,
+    // Connections given once, when a member's biodata is approved for the first time.
+    approvalGift: 1,
+    // Discount (%) on packages for members whose biodata is approved. 0 turns it off.
+    approvedDiscountPercent: 0,
     bkash: { enabled: true, manualNumber: '', accountType: 'personal' },
     nagad: { enabled: true, manualNumber: '', accountType: 'personal' },
     rocket: { enabled: true, manualNumber: '', accountType: 'personal' },

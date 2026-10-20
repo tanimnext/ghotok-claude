@@ -4,6 +4,7 @@ import {
   BIODATA_STATUS,
   DELETE_REASONS,
   EDUCATION_LEVELS,
+  HIDE_REASONS,
   NID_STATUS,
   PHOTO_VISIBILITY,
   biodataCompletion,
@@ -49,6 +50,8 @@ const biodataSchema = new Schema(
     user: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
     status: { type: String, enum: optionValues(BIODATA_STATUS), default: 'draft', index: true },
     rejectionReason: { type: String, maxlength: 1000 },
+    // When the owner accepted the eligibility rules and pledge before starting.
+    pledgeAcceptedAt: Date,
     submittedAt: Date,
     approvedAt: Date,
     firstApprovedAt: Date,
@@ -56,6 +59,23 @@ const biodataSchema = new Schema(
     reviewedBy: { type: Schema.Types.ObjectId, ref: 'User' },
 
     isHidden: { type: Boolean, default: false },
+    hideReason: { type: String, enum: [...optionValues(HIDE_REASONS), null] },
+    hideNote: { type: String, maxlength: 500 },
+    // Answers a reviewer asked the owner to correct ("Needs changes"). Cleared on approval.
+    corrections: [
+      new Schema(
+        {
+          section: { type: String, required: true },
+          field: { type: String, required: true },
+          note: { type: String, maxlength: 300 },
+          // The value when the correction was requested, to tell whether it has changed since.
+          previous: Schema.Types.Mixed,
+        },
+        { _id: false },
+      ),
+    ],
+    // Staff can pause editing and resubmitting until this date (repeated misuse).
+    editSuspendedUntil: { type: Date, default: null },
     // Set by staff when the owner's account is suspended or banned.
     blocked: { type: Boolean, default: false },
 
@@ -99,6 +119,10 @@ const biodataSchema = new Schema(
     division: String,
     district: String,
     presentDistrict: String,
+    upazila: String,
+    presentUpazila: String,
+    educationMedium: String,
+    specialCategories: { type: [String], default: undefined },
     educationLevel: String,
     educationRank: Number,
     profession: String,
@@ -109,7 +133,8 @@ const biodataSchema = new Schema(
 
 biodataSchema.index({ status: 1, isHidden: 1, blocked: 1, deletedAt: 1, type: 1, approvedAt: -1 });
 biodataSchema.index({ religion: 1, maritalStatus: 1, birthDate: 1 });
-biodataSchema.index({ district: 1 });
+biodataSchema.index({ district: 1, upazila: 1 });
+biodataSchema.index({ presentDistrict: 1, presentUpazila: 1 });
 
 biodataSchema.pre('validate', function syncDerived(next) {
   const g = this.general ?? {};
@@ -122,7 +147,13 @@ biodataSchema.pre('validate', function syncDerived(next) {
   this.complexion = g.complexion;
   this.district = a.permanentDistrict;
   this.division = a.permanentDivision ?? divisionOf(a.permanentDistrict);
-  this.presentDistrict = a.presentLocation === 'bangladesh' ? a.presentDistrict : undefined;
+  const inBangladesh = a.presentLocation === 'bangladesh';
+  this.presentDistrict = inBangladesh ? a.presentDistrict : undefined;
+  this.upazila = a.permanentUpazila || undefined;
+  this.presentUpazila = inBangladesh ? a.presentUpazila || undefined : undefined;
+  this.educationMedium = this.education?.educationMedium;
+  const categories = this.personal?.specialCategories;
+  this.specialCategories = categories?.length ? [...categories] : undefined;
   this.educationLevel = this.education?.highestEducation;
   const rank = EDUCATION_LEVELS.findIndex((e) => e.value === this.educationLevel);
   this.educationRank = rank >= 0 ? rank : undefined;

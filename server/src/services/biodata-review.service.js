@@ -9,6 +9,8 @@ import { escapeRegex } from '../utils/strings.js';
 import { recordAudit } from './audit.service.js';
 import { notify } from './notification.service.js';
 import { getSetting } from './settings.service.js';
+import { correctionsState } from './biodata.service.js';
+import { changeBalance } from './connection.service.js';
 import { visitStats } from './visit.service.js';
 
 // Staff work on biodatas: review queue, approval, edits, hiding, deletion,
@@ -63,7 +65,12 @@ export async function getBiodataForReview(id) {
     RestoreRequest.findOne({ biodata: b._id }).sort({ createdAt: -1 }).lean(),
   ]);
   return {
-    biodata: { ...toFullView(b), deleteNote: b.deleteNote ?? null, reviewedAt: b.reviewedAt ?? null },
+    biodata: {
+      ...toFullView(b),
+      corrections: correctionsState(b),
+      deleteNote: b.deleteNote ?? null,
+      reviewedAt: b.reviewedAt ?? null,
+    },
     completion: biodataCompletion(b.sectionsObject()),
     owner: toUserSummary(b.user),
     activity: { visits, favoritedBy, unlocks, proposals },
@@ -87,15 +94,28 @@ export async function approveBiodata(id, ctx) {
     throw conflict('NID_REQUIRED', 'Verify the NID before approving.');
   }
   const now = new Date();
+  const firstApproval = !b.firstApprovedAt;
   Object.assign(b, {
     status: 'approved',
     approvedAt: now,
     reviewedAt: now,
     reviewedBy: ctx.actor._id,
     rejectionReason: undefined,
+    corrections: [],
   });
   b.firstApprovedAt ??= now;
   await b.save();
+  // A one-time gift of connections the first time a biodata goes live.
+  const { approvalGift } = await getSetting('payments');
+  if (firstApproval && approvalGift > 0) {
+    await changeBalance(b.user._id, approvalGift, {
+      type: 'gift',
+      biodata: b._id,
+      actor: ctx.actor._id,
+      reason: `Approval gift for ${b.biodataNo}`,
+    });
+    await notify(b.user._id, 'connections_gift', { n: approvalGift }, '/dashboard/connections');
+  }
   await notify(b.user._id, 'biodata_approved', { biodataNo: b.biodataNo }, `/biodatas/${b.biodataNo}`);
   await recordAudit(ctx, 'biodata.approve', {
     targetType: 'biodata',
@@ -105,14 +125,20 @@ export async function approveBiodata(id, ctx) {
   return toAdminRow(b);
 }
 
-/** Sends a biodata back to its owner with the changes needed. */
-export async function rejectBiodata(id, reason, ctx) {
+/**
+ * Sends a biodata back to its owner with the changes needed: a general message and,
+ * optionally, the specific answers to correct (each with a note). The owner cannot
+ * resubmit until every flagged answer has changed.
+ */
+export async function rejectBiodata(id, { reason, corrections = [] }, ctx) {
   const b = await load(id);
+  const sections = b.sectionsObject();
   Object.assign(b, {
     status: 'rejected',
     rejectionReason: reason,
     reviewedAt: new Date(),
     reviewedBy: ctx.actor._id,
+    corrections: corrections.map((c) => ({ ...c, previous: sections[c.section]?.[c.field] ?? null })),
   });
   await b.save();
   await notify(b.user._id, 'biodata_rejected', { biodataNo: b.biodataNo, reason }, '/dashboard/biodata');
@@ -120,7 +146,7 @@ export async function rejectBiodata(id, reason, ctx) {
     targetType: 'biodata',
     targetId: b._id,
     summary: `Rejected ${b.biodataNo}`,
-    meta: { reason },
+    meta: { reason, corrections: corrections.map((c) => `${c.section}.${c.field}`) },
   });
   return toAdminRow(b);
 }
@@ -138,6 +164,29 @@ export async function editSection(id, section, data, ctx) {
     summary: `Edited ${section} of ${b.biodataNo}`,
   });
   return { biodata: toFullView(b), completion: biodataCompletion(b.sectionsObject()) };
+}
+
+/** Pauses (or resumes, with `until: null`) the owner's editing and resubmitting. */
+export async function setEditSuspension(id, { until, reason }, ctx) {
+  const b = await load(id);
+  b.editSuspendedUntil = until ?? null;
+  await b.save();
+  if (until)
+    await notify(
+      b.user._id,
+      'edit_suspended',
+      { biodataNo: b.biodataNo, until, reason },
+      '/dashboard/biodata',
+    );
+  await recordAudit(ctx, until ? 'biodata.suspend_edit' : 'biodata.resume_edit', {
+    targetType: 'biodata',
+    targetId: b._id,
+    summary: until
+      ? `Editing of ${b.biodataNo} paused until ${until.toISOString().slice(0, 10)}`
+      : `Editing of ${b.biodataNo} resumed`,
+    meta: { reason },
+  });
+  return toAdminRow(b);
 }
 
 /** Hides (or un-hides) a biodata from the public, independent of the owner's own setting. */
@@ -253,6 +302,7 @@ export function listRestoreRequests({ status }, query) {
       status: r.status,
       reason: r.reason ?? null,
       note: r.note ?? null,
+      permanent: !!r.permanent,
       createdAt: r.createdAt,
       decidedAt: r.decidedAt ?? null,
       biodata: r.biodata
@@ -277,10 +327,10 @@ export async function approveRestoreRequest(id, note, ctx) {
   await restore(b, note, ctx);
 }
 
-export async function declineRestoreRequest(id, note, ctx) {
+export async function declineRestoreRequest(id, { note, permanent = false }, ctx) {
   const request = await RestoreRequest.findOneAndUpdate(
     { _id: id, status: 'pending' },
-    { status: 'declined', note, decidedBy: ctx.actor._id, decidedAt: new Date() },
+    { status: 'declined', note, permanent, decidedBy: ctx.actor._id, decidedAt: new Date() },
     { new: true },
   ).populate('biodata', 'biodataNo');
   if (!request) throw notFound('Request');

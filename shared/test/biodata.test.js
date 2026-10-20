@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   BIODATA_SECTIONS,
+  DISTRICTS,
   ageFromDob,
   biodataCompletion,
   formatFieldValue,
@@ -8,6 +9,8 @@ import {
   isValidPhone,
   normalizePhone,
   publicSections,
+  setFieldValue,
+  upazilasOf,
   validateBiodata,
   validateSection,
 } from '../src/index.js';
@@ -150,5 +153,112 @@ describe('formatFieldValue', () => {
     expect(formatFieldValue(district, 'coxs_bazar', 'en')).toBe('Cox’s Bazar');
     const dob = getSection('general').fields.find((f) => f.key === 'dateOfBirth');
     expect(formatFieldValue(dob, '1999-02-03', 'en')).toBe('3 February 1999');
+  });
+});
+
+describe('upazilas', () => {
+  const address = {
+    permanentDivision: 'dhaka',
+    permanentDistrict: 'dhaka',
+    presentLocation: 'bangladesh',
+    presentDistrict: 'gazipur',
+  };
+
+  it('accepts an upazila or city corporation of the chosen district', () => {
+    const { value, errors } = validateSection(
+      'address',
+      { ...address, permanentUpazila: 'dhaka_dhaka_south_cc', presentUpazila: 'gazipur_kaliakair' },
+      { partial: true },
+    );
+    expect(errors).toEqual({});
+    expect(value.permanentUpazila).toBe('dhaka_dhaka_south_cc');
+    expect(value.presentUpazila).toBe('gazipur_kaliakair');
+  });
+
+  it('rejects an upazila from another district', () => {
+    const { value, errors } = validateSection(
+      'address',
+      { ...address, permanentUpazila: 'gazipur_kaliakair' },
+      { partial: true },
+    );
+    expect(errors.permanentUpazila).toBe('invalid');
+    expect(value.permanentUpazila).toBeUndefined();
+  });
+
+  it('has an upazila list for every district', () => {
+    for (const d of DISTRICTS) expect(upazilasOf(d.value).length, d.value).toBeGreaterThan(0);
+  });
+
+  it('formats an upazila in both languages', () => {
+    const field = getSection('address').fields.find((f) => f.key === 'permanentUpazila');
+    expect(formatFieldValue(field, 'dhaka_dhaka_south_cc', 'en')).toBe('Dhaka South City Corporation');
+    expect(formatFieldValue(field, 'dhaka_dhaka_south_cc', 'bn')).toBe('ঢাকা দক্ষিণ সিটি কর্পোরেশন');
+  });
+});
+
+describe('public date of birth', () => {
+  it('shows only the month and year of birth', () => {
+    const pub = publicSections({ general: { dateOfBirth: '2001-03-14', biodataType: 'bride' } });
+    expect(pub.general.dateOfBirth).toBe('2001-03');
+    const field = getSection('general').fields.find((f) => f.key === 'dateOfBirth');
+    expect(formatFieldValue(field, '2001-03', 'en')).toBe('March 2001');
+    expect(formatFieldValue(field, '2001-03-14', 'en')).toBe('14 March 2001');
+  });
+});
+
+describe('setFieldValue', () => {
+  it('clears dependent location fields down the chain', () => {
+    const section = getSection('address');
+    const values = {
+      permanentDivision: 'dhaka',
+      permanentDistrict: 'dhaka',
+      permanentUpazila: 'dhaka_dohar',
+      grewUpAt: 'Dhaka',
+    };
+    const next = setFieldValue(section, values, 'permanentDivision', 'khulna');
+    expect(next).toEqual({
+      permanentDivision: 'khulna',
+      permanentDistrict: '',
+      permanentUpazila: '',
+      grewUpAt: 'Dhaka',
+    });
+    expect(setFieldValue(section, values, 'permanentDistrict', 'gazipur').permanentUpazila).toBe('');
+  });
+});
+
+describe('legal minimum age', () => {
+  const dobForAge = (years) => {
+    const d = new Date();
+    d.setUTCFullYear(d.getUTCFullYear() - years);
+    d.setUTCDate(d.getUTCDate() - 7);
+    return d.toISOString().slice(0, 10);
+  };
+
+  it('requires grooms to be 21 and brides 18', () => {
+    const general = {
+      maritalStatus: 'never_married',
+      religion: 'islam',
+      height: 66,
+      complexion: 'fair',
+      nationality: 'Bangladeshi',
+    };
+    const groom19 = validateSection(
+      'general',
+      { ...general, biodataType: 'groom', dateOfBirth: dobForAge(19) },
+      { partial: true },
+    );
+    expect(groom19.errors.dateOfBirth).toBe('age_min_groom');
+    const groom21 = validateSection(
+      'general',
+      { ...general, biodataType: 'groom', dateOfBirth: dobForAge(21) },
+      { partial: true },
+    );
+    expect(groom21.errors.dateOfBirth).toBeUndefined();
+    const bride19 = validateSection(
+      'general',
+      { ...general, biodataType: 'bride', dateOfBirth: dobForAge(19) },
+      { partial: true },
+    );
+    expect(bride19.errors.dateOfBirth).toBeUndefined();
   });
 });

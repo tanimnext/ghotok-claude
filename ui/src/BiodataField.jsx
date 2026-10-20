@@ -1,6 +1,6 @@
 'use client';
 
-import { DISTRICTS, districtsOf } from '@ghotok/shared';
+import { DISTRICTS, districtsOf, upazilasOf } from '@ghotok/shared';
 import { Field } from './Field.jsx';
 
 const DEFAULT_TEXT = { choose: 'Choose…', selectMany: 'Select all that apply', privateNote: 'Private' };
@@ -95,6 +95,20 @@ export function BiodataField({ field, value, values, error, onChange, lang = 'en
                 {options.map((d) => (
                   <option key={d.value} value={d.value}>
                     {d[lang]}
+                  </option>
+                ))}
+              </select>
+            );
+          }
+          case 'upazila': {
+            // Choose the district first; the list then shows its upazilas and city corporations.
+            const options = upazilasOf(values?.[field.districtField]);
+            return (
+              <select {...common} disabled={!options.length}>
+                <option value="">{text.choose}</option>
+                {options.map((u) => (
+                  <option key={u.value} value={u.value}>
+                    {u[lang]}
                   </option>
                 ))}
               </select>

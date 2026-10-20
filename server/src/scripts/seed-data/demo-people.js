@@ -1,5 +1,5 @@
 // Demo people for local development and tests. Fictional names and numbers.
-import { DISTRICTS, divisionOf } from '@ghotok/shared';
+import { DISTRICTS, divisionOf, upazilasOf } from '@ghotok/shared';
 
 // [type, religion, age, heightInches, district, education, profession, jobTitle, institution, name]
 export const PEOPLE = [
@@ -267,6 +267,12 @@ function dobForAge(age, i) {
   return d.toISOString().slice(0, 10);
 }
 
+/** A real upazila of the district, varied by person. */
+function pickUpazila(district, i) {
+  const list = upazilasOf(district);
+  return list[i % list.length].value;
+}
+
 export function demoSections(
   [type, religion, age, height, district, education, profession, job, institution, name],
   i,
@@ -289,11 +295,14 @@ export function demoSections(
     address: {
       permanentDivision: divisionOf(district),
       permanentDistrict: district,
-      permanentUpazila: 'Sadar',
+      permanentUpazila: pickUpazila(district, i),
       presentLocation: profession === 'abroad' ? 'abroad' : 'bangladesh',
       ...(profession === 'abroad'
         ? { presentCountry: 'United Kingdom' }
-        : { presentDistrict: i % 3 ? district : 'dhaka' }),
+        : {
+            presentDistrict: i % 3 ? district : 'dhaka',
+            presentUpazila: pickUpazila(i % 3 ? district : 'dhaka', i + 1),
+          }),
       grewUpAt: `${placeName} town`,
     },
     education: {

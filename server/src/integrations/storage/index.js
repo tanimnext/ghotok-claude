@@ -12,5 +12,7 @@ export function photoUrl(photo) {
   return (photo.storage === 'cloudflare' ? cloudflareStorage : localDiskStorage).photoUrl(photo.imageId);
 }
 
-export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+export { ATTACHMENT_TYPES, FILE_TYPES, IMAGE_TYPES, MAX_FILE_BYTES } from './file-types.js';
+export { IMAGE_TYPES as ALLOWED_IMAGE_TYPES } from './file-types.js';
+/** Largest photo or NID image. */
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;

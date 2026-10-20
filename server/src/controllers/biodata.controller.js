@@ -37,7 +37,7 @@ export async function submit(req, res) {
 }
 
 export async function setVisibility(req, res) {
-  res.json(ownerView(await biodataService.setHidden(req.user._id, req.body.hidden)));
+  res.json(ownerView(await biodataService.setHidden(req.user._id, req.body)));
 }
 
 export async function softDelete(req, res) {
@@ -46,6 +46,14 @@ export async function softDelete(req, res) {
 
 export async function getRestoreRequest(req, res) {
   res.json({ request: await biodataService.latestRestoreRequest(req.user._id) });
+}
+
+export async function restoreOwn(req, res) {
+  res.json(ownerView(await biodataService.restoreOwn(req.user._id)));
+}
+
+export async function lookupPartner(req, res) {
+  res.json({ partner: await biodataService.lookupPartner(req.query.no, req.user._id) });
 }
 
 export async function requestRestore(req, res) {
@@ -82,8 +90,27 @@ export async function submitNid(req, res) {
 
 // ----- Public biodatas -----------------------------------------------------------------
 
+/**
+ * Who is looking: `u:<userId>` for members, `v:<cookie id>` for anonymous visitors.
+ * With `create`, an anonymous visitor without a cookie gets one.
+ */
+function viewerKeyFor(req, res, { create = false } = {}) {
+  if (req.user) return `u:${req.user._id}`;
+  let vid = req.cookies?.[VISITOR_COOKIE];
+  if (!isValidVisitorId(vid)) {
+    if (!create) return null;
+    vid = newVisitorId();
+    res.cookie(VISITOR_COOKIE, vid, { httpOnly: true, sameSite: 'lax', maxAge: 400 * 864e5, path: '/' });
+  }
+  return `v:${vid}`;
+}
+
 export async function search(req, res) {
-  res.json(await searchService.searchBiodatas(req.query, req.user));
+  res.json(await searchService.searchBiodatas(req.query, req.user, viewerKeyFor(req, res)));
+}
+
+export async function locationCounts(req, res) {
+  res.json(await searchService.locationCounts(req.query, req.user));
 }
 
 export async function featured(req, res) {
@@ -98,16 +125,7 @@ export async function getPublic(req, res) {
 export async function visit(req, res) {
   const b = await biodataService.findPublic(req.params.no);
   if (req.user && b.user.equals(req.user._id)) return res.json({ counted: false });
-  let viewerKey = req.user && `u:${req.user._id}`;
-  if (!viewerKey) {
-    let vid = req.cookies?.[VISITOR_COOKIE];
-    if (!isValidVisitorId(vid)) {
-      vid = newVisitorId();
-      res.cookie(VISITOR_COOKIE, vid, { httpOnly: true, sameSite: 'lax', maxAge: 400 * 864e5, path: '/' });
-    }
-    viewerKey = `v:${vid}`;
-  }
-  res.json({ counted: await recordVisit(b, viewerKey) });
+  res.json({ counted: await recordVisit(b, viewerKeyFor(req, res, { create: true })) });
 }
 
 export async function viewerState(req, res) {

@@ -11,7 +11,7 @@ const byNumber = validate({ params: schema.biodataNoParams });
 
 // ----- The member's own biodata (registered before /:no so "me" is never read as a number) -----
 router.get('/me', requireAuth, biodata.getOwn);
-router.post('/me', ...member, biodata.createOwn);
+router.post('/me', ...member, validate({ body: schema.createBiodata }), biodata.createOwn);
 router.put(
   '/me/sections/:section',
   ...member,
@@ -22,7 +22,9 @@ router.put(
 router.post('/me/submit', ...member, biodata.submit);
 router.patch('/me/visibility', requireAuth, validate({ body: schema.visibility }), biodata.setVisibility);
 router.delete('/me', requireAuth, validate({ body: schema.deleteBiodata }), biodata.softDelete);
+router.post('/me/restore', requireAuth, biodata.restoreOwn);
 router.get('/me/restore-request', requireAuth, biodata.getRestoreRequest);
+router.get('/partner-lookup', requireAuth, validate({ query: schema.partnerLookup }), biodata.lookupPartner);
 router.post(
   '/me/restore-request',
   requireAuth,
@@ -51,6 +53,7 @@ router.post('/me/nid', ...member, validate({ body: schema.submitNid }), biodata.
 // ----- Public -----
 router.get('/', validate({ query: schema.searchQuery }), biodata.search);
 router.get('/featured', validate({ query: schema.featuredQuery }), biodata.featured);
+router.get('/location-counts', validate({ query: schema.searchQuery }), biodata.locationCounts);
 router.get('/:no', byNumber, biodata.getPublic);
 router.post('/:no/visit', byNumber, biodata.visit);
 

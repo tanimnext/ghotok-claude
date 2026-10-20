@@ -14,7 +14,11 @@ export async function approve(req, res) {
 }
 
 export async function reject(req, res) {
-  res.json({ biodata: await review.rejectBiodata(req.params.id, req.body.reason, ctx(req)) });
+  res.json({ biodata: await review.rejectBiodata(req.params.id, req.body, ctx(req)) });
+}
+
+export async function suspendEdit(req, res) {
+  res.json({ biodata: await review.setEditSuspension(req.params.id, req.body, ctx(req)) });
 }
 
 export async function editSection(req, res) {
@@ -55,6 +59,6 @@ export async function approveRestoreRequest(req, res) {
 }
 
 export async function declineRestoreRequest(req, res) {
-  await review.declineRestoreRequest(req.params.id, req.body?.note, ctx(req));
+  await review.declineRestoreRequest(req.params.id, req.body ?? {}, ctx(req));
   res.json({ ok: true });
 }

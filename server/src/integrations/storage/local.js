@@ -2,12 +2,13 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { env } from '../../config/env.js';
+import { FILE_TYPES, IMAGE_TYPES } from './file-types.js';
 import { signUploadToken, verifyUploadToken } from './upload-token.js';
 
 // Development storage: files live on the API server's disk and every read or
 // write goes through a short-lived signed URL served by routes/uploads.js.
 
-export const EXT_BY_TYPE = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+export const EXT_BY_TYPE = Object.fromEntries(Object.entries(FILE_TYPES).map(([type, t]) => [type, t.ext]));
 const root = () => path.resolve(env.UPLOAD_DIR);
 
 /** Absolute path of a stored object, refusing anything that escapes the upload directory. */
@@ -47,7 +48,7 @@ export const localDiskStorage = {
   async createPhotoUpload({ userId }) {
     const imageId = crypto.randomUUID();
     const key = `photos/${imageId}`;
-    const token = signUploadToken({ kind: 'put', key, userId });
+    const token = signUploadToken({ kind: 'put', key, userId, types: IMAGE_TYPES });
     return { imageId, storage: 'local', uploadURL: `/api/uploads/local/${token}`, method: 'PUT' };
   },
 
@@ -59,13 +60,20 @@ export const localDiskStorage = {
     await removeObject(`photos/${imageId}`);
   },
 
-  async createPrivateUpload({ key, userId }) {
-    const token = signUploadToken({ kind: 'put', key, userId });
-    return { key, uploadURL: `/api/uploads/local/${token}`, method: 'PUT' };
+  /** A one-off upload of exactly `contentType` to `key` (private: NID images, attachments, banners). */
+  async createPrivateUpload({ key, userId, contentType }) {
+    const token = signUploadToken({ kind: 'put', key, userId, types: [contentType] });
+    return {
+      key,
+      uploadURL: `/api/uploads/local/${token}`,
+      method: 'PUT',
+      headers: { 'Content-Type': contentType },
+    };
   },
 
-  async privateUrl(key) {
-    return `/api/uploads/file/${signUploadToken({ kind: 'get', key }, '5m')}`;
+  /** A short-lived link to a private file; with `filename` it downloads as that name. */
+  async privateUrl(key, { filename, expiresIn = '5m' } = {}) {
+    return `/api/uploads/file/${signUploadToken({ kind: 'get', key, filename }, expiresIn)}`;
   },
 
   async deletePrivate(key) {
@@ -75,12 +83,6 @@ export const localDiskStorage = {
   async exists(key) {
     return !!(await findObject(key));
   },
-};
-
-const MAGIC_BYTES = {
-  'image/jpeg': (b) => b[0] === 0xff && b[1] === 0xd8,
-  'image/png': (b) => b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47,
-  'image/webp': (b) => b.subarray(0, 4).toString() === 'RIFF' && b.subarray(8, 12).toString() === 'WEBP',
 };
 
 /**
@@ -93,10 +95,13 @@ export async function saveSignedUpload(token, contentType, body) {
   const type = String(contentType ?? '')
     .split(';')[0]
     .trim();
-  if (!EXT_BY_TYPE[type]) return { error: 'BAD_TYPE' };
+  const fileType = FILE_TYPES[type];
+  // Older tokens without `types` were issued for photos only.
+  if (!fileType || !(t.types ?? IMAGE_TYPES).includes(type)) return { error: 'BAD_TYPE' };
   if (!Buffer.isBuffer(body) || !body.length) return { error: 'EMPTY' };
-  if (!MAGIC_BYTES[type](body)) return { error: 'BAD_TYPE' };
-  await writeObject(`${t.key}.${EXT_BY_TYPE[type]}`, body);
+  if (body.length > fileType.maxBytes) return { error: 'TOO_LARGE' };
+  if (!fileType.magic(body)) return { error: 'BAD_TYPE' };
+  await writeObject(`${t.key}.${fileType.ext}`, body);
   return { ok: true };
 }
 
@@ -110,5 +115,5 @@ export async function resolveSignedDownload(token) {
   const found = await findObject(t.key);
   if (!found) return { error: 'NOT_FOUND' };
   const contentType = Object.entries(EXT_BY_TYPE).find(([, ext]) => ext === found.ext)?.[0];
-  return { full: found.full, contentType };
+  return { full: found.full, contentType, filename: t.filename };
 }

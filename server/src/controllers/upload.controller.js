@@ -9,7 +9,8 @@ export async function upload(req, res) {
   const result = await saveSignedUpload(req.params.token, req.get('content-type'), req.body);
   if (result.error === 'BAD_TOKEN') throw forbidden('BAD_UPLOAD_TOKEN', 'The upload link has expired.');
   if (result.error === 'EMPTY') throw badRequest('EMPTY', 'The file is empty.');
-  if (result.error) throw badRequest('BAD_TYPE', 'Please upload a JPG, PNG or WEBP image.');
+  if (result.error === 'TOO_LARGE') throw badRequest('TOO_LARGE', 'The file is too large.');
+  if (result.error) throw badRequest('BAD_TYPE', 'This type of file is not accepted here.');
   res.json({ ok: true });
 }
 
@@ -22,5 +23,6 @@ export async function download(req, res) {
     'Cache-Control': 'private, max-age=600',
     'X-Content-Type-Options': 'nosniff',
   });
+  if (file.filename) res.attachment(file.filename);
   fs.createReadStream(file.full).pipe(res);
 }

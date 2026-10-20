@@ -13,17 +13,18 @@ import { BiodataCard } from './BiodataCard.jsx';
 
 /**
  * Search results. The server renders the anonymous results (fast, indexable);
- * for signed-in members they are re-fetched with the session so biodatas the
- * member marked "Not interested" — and their own — are left out.
+ * the browser then re-fetches them with the visitor's cookies, which leaves out a
+ * member's own and "Not interested" biodatas and marks the ones already opened.
  */
 export function BrowseResults({ params, initial }) {
   const { t, lang } = useT();
   const router = useRouter();
   const { user } = useAuth();
+  // Re-fetched in the browser so the session (or visitor cookie) can mark seen and
+  // shortlisted biodatas; the server-rendered results show until then.
   const { data } = useQuery({
-    queryKey: ['search', params, user?.id],
+    queryKey: ['search', params, user?.id ?? 'guest'],
     queryFn: () => biodataApi.search(params),
-    enabled: !!user,
     placeholderData: keepPreviousData,
     initialData: user ? undefined : initial,
   });
@@ -60,7 +61,7 @@ export function BrowseResults({ params, initial }) {
       ) : (
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {result.items.map((b) => (
-            <BiodataCard key={b.id} biodata={b} />
+            <BiodataCard key={b.id} biodata={b} canShortlist={!!user} />
           ))}
         </div>
       )}

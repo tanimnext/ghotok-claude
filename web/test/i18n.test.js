@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import bn from '../src/lib/i18n/bn.js';
 import en from '../src/lib/i18n/en.js';
@@ -30,6 +32,26 @@ describe('dictionaries', () => {
         const value = path.split('.').reduce((n, k) => n?.[k], dict);
         expect(String(value).trim().length, path).toBeGreaterThan(0);
       }
+    }
+  });
+});
+
+function sourceFiles(dir) {
+  return readdirSync(dir).flatMap((name) => {
+    const path = join(dir, name);
+    if (statSync(path).isDirectory()) return sourceFiles(path);
+    return /\.jsx?$/.test(name) ? [path] : [];
+  });
+}
+
+describe('dictionary coverage', () => {
+  it('defines every key the website uses', () => {
+    const lookup = (path) => path.split('.').reduce((n, k) => n?.[k], en);
+    for (const file of sourceFiles(join(import.meta.dirname, '../src'))) {
+      const code = readFileSync(file, 'utf8');
+      for (const [, key] of code.matchAll(/\bt\(\s*'([\w.]+)'/g)) expect(lookup(key), `${key} in ${file}`).toBeDefined();
+      for (const [, prefix] of code.matchAll(/\bt\(\s*`([\w.]+)\.\$\{/g))
+        expect(lookup(prefix), `${prefix}.* in ${file}`).toBeTypeOf('object');
     }
   });
 });

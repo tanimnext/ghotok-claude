@@ -20,10 +20,10 @@ export const badRequest = (code = 'BAD_REQUEST', message, details) =>
 export const unauthorized = (code = 'UNAUTHORIZED', message = 'Please log in to continue.') =>
   new ApiError(401, code, message);
 export const paymentRequired = (code, message) => new ApiError(402, code, message);
-export const forbidden = (code = 'FORBIDDEN', message = 'You do not have permission to do this.') =>
-  new ApiError(403, code, message);
+export const forbidden = (code = 'FORBIDDEN', message = 'You do not have permission to do this.', details) =>
+  new ApiError(403, code, message, details);
 export const notFound = (what = 'Resource') => new ApiError(404, 'NOT_FOUND', `${what} not found.`);
-export const conflict = (code = 'CONFLICT', message) => new ApiError(409, code, message);
+export const conflict = (code = 'CONFLICT', message, details) => new ApiError(409, code, message, details);
 export const tooMany = (code = 'RATE_LIMITED', message) => new ApiError(429, code, message);
 
 /** A 400 VALIDATION_ERROR whose details map field names to error codes or messages. */

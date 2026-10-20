@@ -8,6 +8,7 @@ export { Counter, nextSequence } from './counter.model.js';
 export { Dislike } from './dislike.model.js';
 export { Faq } from './faq.model.js';
 export { Favorite } from './favorite.model.js';
+export { MarriageReport } from './marriage-report.model.js';
 export { Notification } from './notification.model.js';
 export { Otp } from './otp.model.js';
 export { Package } from './package.model.js';

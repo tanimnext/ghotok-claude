@@ -49,9 +49,16 @@ export function toFullView(b) {
     rejectionReason: b.rejectionReason ?? null,
     submittedAt: b.submittedAt ?? null,
     isHidden: b.isHidden,
+    hideReason: b.hideReason ?? null,
+    hideNote: b.hideNote ?? null,
     blocked: !!b.blocked,
     deletedAt: b.deletedAt ?? null,
     deleteReason: b.deleteReason ?? null,
+    // Whether the biodata has ever been live (a deleted one then needs staff approval to restore).
+    wasPublished: !!b.firstApprovedAt,
+    editSuspendedUntil:
+      b.editSuspendedUntil && b.editSuspendedUntil > new Date() ? b.editSuspendedUntil : null,
+    pledgeAcceptedAt: b.pledgeAcceptedAt ?? null,
     completion: b.completion,
     photo: b.photo?.imageId ? { url: photoUrl(b.photo), visibility: b.photo.visibility } : null,
     nid: {

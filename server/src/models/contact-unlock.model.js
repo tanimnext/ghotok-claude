@@ -8,6 +8,8 @@ const contactUnlockSchema = new Schema(
     user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     biodata: { type: Schema.Types.ObjectId, ref: 'Biodata', required: true },
     transaction: { type: Schema.Types.ObjectId, ref: 'ConnectionTransaction' },
+    // Set when staff uphold the member's report about this biodata and return the connection.
+    refundedAt: Date,
   },
   { timestamps: true },
 );

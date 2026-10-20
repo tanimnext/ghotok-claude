@@ -32,6 +32,7 @@ export const biodataApi = {
 
   // Other members' biodatas
   search: (query) => api.get('/biodatas', query),
+  locationCounts: (query) => api.get('/biodatas/location-counts', query),
   viewer: (no) => api.get(`/biodatas/${no}/viewer`),
   visit: (no) => api.post(`/biodatas/${no}/visit`),
   unlock: (no) => api.post(`/biodatas/${no}/unlock`),

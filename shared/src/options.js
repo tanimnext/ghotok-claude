@@ -173,6 +173,23 @@ export const NID_STATUS = [
   { value: 'rejected', en: 'Rejected', bn: 'প্রত্যাখ্যাত' },
 ];
 
+/** Situations a member may choose to disclose so families looking for them can filter on it. */
+export const SPECIAL_CATEGORIES = [
+  { value: 'disability', en: 'Has a disability', bn: 'প্রতিবন্ধিতা আছে' },
+  { value: 'infertility', en: 'Unable to have children', bn: 'সন্তান ধারণে অক্ষম' },
+  { value: 'converted', en: 'Converted to my current faith', bn: 'বর্তমান ধর্মে ধর্মান্তরিত' },
+  { value: 'orphan', en: 'Orphan', bn: 'এতিম' },
+];
+
+/** Why a member hides a live biodata (hiding keeps everything and can be undone). */
+export const HIDE_REASONS = [
+  { value: 'in_talks', en: 'In talks with a family', bn: 'একটি পরিবারের সাথে কথা চলছে' },
+  { value: 'engaged', en: 'Engaged / marriage is fixed', bn: 'বিয়ে ঠিক হয়েছে' },
+  { value: 'break', en: 'Taking a break', bn: 'কিছুদিনের বিরতি' },
+  { value: 'privacy', en: 'Privacy concerns', bn: 'গোপনীয়তার কারণে' },
+  { value: 'other', en: 'Other', bn: 'অন্যান্য' },
+];
+
 export const DELETE_REASONS = [
   { value: 'married_via_ghotok', en: 'Got married through Ghotok', bn: 'ঘটকের মাধ্যমে বিয়ে হয়েছে' },
   { value: 'married_elsewhere', en: 'Got married elsewhere', bn: 'অন্য মাধ্যমে বিয়ে হয়েছে' },
@@ -212,6 +229,8 @@ export const LEDGER_TYPES = [
   { value: 'purchase', en: 'Purchase', bn: 'ক্রয়' },
   { value: 'unlock', en: 'Contact unlocked', bn: 'যোগাযোগ আনলক' },
   { value: 'admin_grant', en: 'Granted by admin', bn: 'অ্যাডমিন প্রদান করেছেন' },
+  { value: 'gift', en: 'Gift for an approved biodata', bn: 'অনুমোদিত বায়োডাটার উপহার' },
+  { value: 'report_refund', en: 'Returned after a report', bn: 'রিপোর্টের পর ফেরত' },
   { value: 'admin_revoke', en: 'Revoked by admin', bn: 'অ্যাডমিন বাতিল করেছেন' },
   { value: 'refund_credit', en: 'Refund credit', bn: 'রিফান্ড ক্রেডিট' },
   { value: 'refund_revoke', en: 'Refunded (money returned)', bn: 'রিফান্ড (টাকা ফেরত)' },
@@ -275,6 +294,7 @@ export const RESTORE_STATUS = [
 
 export const SORT_OPTIONS = [
   { value: 'newest', en: 'Newest approved', bn: 'সর্বশেষ অনুমোদিত' },
+  { value: 'oldest', en: 'Oldest first', bn: 'পুরোনো আগে' },
   { value: 'age_asc', en: 'Age: low to high', bn: 'বয়স: কম থেকে বেশি' },
   { value: 'age_desc', en: 'Age: high to low', bn: 'বয়স: বেশি থেকে কম' },
 ];

@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { VALIDATION_MESSAGES, isFieldVisible, validateSection } from '@ghotok/shared';
+import { VALIDATION_MESSAGES, isFieldVisible, setFieldValue, validateSection } from '@ghotok/shared';
 import { BiodataField, Button, FormMessage, Modal, useToast } from '@ghotok/ui';
 import { useErrorMessage } from '../hooks/useErrorMessage.js';
 import { adminApi } from '../lib/api.js';
@@ -51,13 +51,8 @@ export function SectionEditor({ biodataId, section, sections, onClose }) {
     if (!Object.keys(found).length) save.mutate(value);
   };
 
-  const setField = (key, value) =>
-    setValues((prev) => {
-      const next = { ...prev, [key]: value };
-      // A district belongs to a division: clear it when the division changes.
-      for (const f of section.fields) if (f.divisionField === key) next[f.key] = '';
-      return next;
-    });
+  // Changing a division or district also clears the places that belonged to it.
+  const setField = (key, value) => setValues((prev) => setFieldValue(section, prev, key, value));
 
   return (
     <Modal

@@ -75,17 +75,37 @@ export const cloudflareStorage = {
     await cfImages(`/v1/${encodeURIComponent(imageId)}`, { method: 'DELETE' }).catch(() => undefined);
   },
 
-  async createPrivateUpload({ key, contentType }) {
+  /**
+   * A presigned PUT for exactly `contentType` (and `size`, when given: R2 then
+   * rejects any other length, which enforces the per-type size limit).
+   */
+  async createPrivateUpload({ key, contentType, size }) {
     const uploadURL = await getSignedUrl(
       r2(),
-      new PutObjectCommand({ Bucket: env.R2_BUCKET, Key: key, ContentType: contentType }),
+      new PutObjectCommand({
+        Bucket: env.R2_BUCKET,
+        Key: key,
+        ContentType: contentType,
+        ...(size ? { ContentLength: size } : {}),
+      }),
       { expiresIn: 600 },
     );
     return { key, uploadURL, method: 'PUT', headers: { 'Content-Type': contentType } };
   },
 
-  async privateUrl(key) {
-    return getSignedUrl(r2(), new GetObjectCommand({ Bucket: env.R2_BUCKET, Key: key }), { expiresIn: 300 });
+  async privateUrl(key, { filename, expiresIn = '5m' } = {}) {
+    const seconds = Number.parseInt(expiresIn, 10) * (String(expiresIn).endsWith('h') ? 3600 : 60);
+    return getSignedUrl(
+      r2(),
+      new GetObjectCommand({
+        Bucket: env.R2_BUCKET,
+        Key: key,
+        ...(filename
+          ? { ResponseContentDisposition: `attachment; filename="${filename.replace(/"/g, '')}"` }
+          : {}),
+      }),
+      { expiresIn: seconds || 300 },
+    );
   },
 
   async deletePrivate(key) {

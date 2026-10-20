@@ -10,6 +10,14 @@ describe('biodata lifecycle', () => {
     const empty = await agent.get('/api/biodatas/me');
     expect(empty.body.biodata).toBeNull();
 
+    // The pledge comes first.
+    const noPledge = await agent.put('/api/biodatas/me/sections/general').send({ data: {} });
+    expect(noPledge.body.error.code).toBe('PLEDGE_REQUIRED');
+    expect((await agent.post('/api/biodatas/me').send({})).status).toBe(400);
+    const started = await agent.post('/api/biodatas/me').send({ pledge: true });
+    expect(started.status).toBe(201);
+    expect(started.body.biodata.pledgeAcceptedAt).toBeTruthy();
+
     const bad = await agent
       .put('/api/biodatas/me/sections/contact')
       .send({ data: { guardianPhone: '12345' } });
@@ -57,6 +65,7 @@ describe('biodata lifecycle', () => {
 
   it('never exposes private fields publicly and lets reviewers approve', async () => {
     const { agent: owner } = await userWithAgent();
+    await owner.post('/api/biodatas/me').send({ pledge: true });
     for (const [key, data] of Object.entries(demoSections(PEOPLE[1], 1)))
       await owner.put(`/api/biodatas/me/sections/${key}`).send({ data });
     const { body } = await owner.post('/api/biodatas/me/submit');
@@ -85,6 +94,7 @@ describe('biodata lifecycle', () => {
 
   it('sends an edited live biodata back to review', async () => {
     const { agent } = await userWithAgent();
+    await agent.post('/api/biodatas/me').send({ pledge: true });
     for (const [key, data] of Object.entries(demoSections(PEOPLE[2], 2)))
       await agent.put(`/api/biodatas/me/sections/${key}`).send({ data });
     await agent.post('/api/biodatas/me/submit');
@@ -156,7 +166,11 @@ describe('biodata lifecycle', () => {
     const owner = await login(user);
     const no = biodata.biodataNo;
 
-    await owner.patch('/api/biodatas/me/visibility').send({ hidden: true });
+    expect((await owner.patch('/api/biodatas/me/visibility').send({ hidden: true })).status).toBe(400);
+    const hidden = await owner
+      .patch('/api/biodatas/me/visibility')
+      .send({ hidden: true, reason: 'in_talks' });
+    expect(hidden.body.biodata.hideReason).toBe('in_talks');
     expect((await request(app).get(`/api/biodatas/${no}`)).status).toBe(404);
     await owner.patch('/api/biodatas/me/visibility').send({ hidden: false });
     expect((await request(app).get(`/api/biodatas/${no}`)).status).toBe(200);

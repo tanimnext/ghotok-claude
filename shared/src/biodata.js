@@ -19,9 +19,14 @@ import {
   PRESENT_LOCATION,
   PROFESSIONS,
   RELIGIONS,
+  SPECIAL_CATEGORIES,
   YES_NO,
 } from './options.js';
 import { DISTRICTS, DIVISION_OPTIONS } from './locations.js';
+import { UPAZILAS, districtOfUpazila } from './upazilas.js';
+
+/** Minimum age for a groom's biodata (Child Marriage Restraint Act 2017). Brides: 18, set on the field. */
+export const GROOM_MIN_AGE = 21;
 
 const notNeverMarried = (b) => !!b?.general?.maritalStatus && b.general.maritalStatus !== 'never_married';
 
@@ -65,6 +70,8 @@ export const BIODATA_SECTIONS = [
         key: 'dateOfBirth',
         type: 'date',
         required: true,
+        // Public profiles show only the month and year of birth.
+        publicPrecision: 'month',
         minAge: 18,
         maxAge: 80,
         label: { en: 'Date of birth', bn: 'জন্ম তারিখ' },
@@ -100,6 +107,11 @@ export const BIODATA_SECTIONS = [
         label: { en: 'Nationality', bn: 'জাতীয়তা' },
       },
     ],
+    // The legal minimum age of marriage in Bangladesh is 21 for men and 18 for women.
+    validate: (v) =>
+      v.biodataType === 'groom' && v.dateOfBirth && ageFromDob(v.dateOfBirth) < GROOM_MIN_AGE
+        ? { dateOfBirth: 'age_min_groom' }
+        : {},
   },
   {
     key: 'address',
@@ -121,9 +133,15 @@ export const BIODATA_SECTIONS = [
       },
       {
         key: 'permanentUpazila',
+        type: 'upazila',
+        districtField: 'permanentDistrict',
+        label: { en: 'Permanent address: upazila / city', bn: 'স্থায়ী ঠিকানা: উপজেলা / সিটি' },
+      },
+      {
+        key: 'permanentArea',
         type: 'text',
-        maxLength: 80,
-        label: { en: 'Permanent address: upazila / thana', bn: 'স্থায়ী ঠিকানা: উপজেলা / থানা' },
+        maxLength: 120,
+        label: { en: 'Permanent address: area or village', bn: 'স্থায়ী ঠিকানা: এলাকা বা গ্রাম' },
       },
       {
         key: 'presentLocation',
@@ -137,6 +155,13 @@ export const BIODATA_SECTIONS = [
         type: 'district',
         required: true,
         label: { en: 'Present address: district', bn: 'বর্তমান ঠিকানা: জেলা' },
+        showIf: (b) => b?.address?.presentLocation === 'bangladesh',
+      },
+      {
+        key: 'presentUpazila',
+        type: 'upazila',
+        districtField: 'presentDistrict',
+        label: { en: 'Present address: upazila / city', bn: 'বর্তমান ঠিকানা: উপজেলা / সিটি' },
         showIf: (b) => b?.address?.presentLocation === 'bangladesh',
       },
       {
@@ -349,6 +374,19 @@ export const BIODATA_SECTIONS = [
         type: 'text',
         maxLength: 120,
         label: { en: 'Languages you speak', bn: 'যে ভাষায় কথা বলেন' },
+      },
+      {
+        key: 'specialCategories',
+        type: 'multiselect',
+        options: SPECIAL_CATEGORIES,
+        label: {
+          en: 'Do any of these apply to you? (optional)',
+          bn: 'এগুলোর কোনোটি কি আপনার ক্ষেত্রে প্রযোজ্য? (ঐচ্ছিক)',
+        },
+        help: {
+          en: 'Families looking for someone in the same situation can find you with the search filters.',
+          bn: 'একই অবস্থার কাউকে খুঁজছেন এমন পরিবার সার্চ ফিল্টারে আপনাকে খুঁজে পাবেন।',
+        },
       },
     ],
   },
@@ -622,6 +660,10 @@ export const VALIDATION_MESSAGES = {
     bn: 'বায়োডাটা জমা দিতে “হ্যাঁ” নির্বাচন করতে হবে।',
   },
   age_min: { en: 'You must be at least 18 years old.', bn: 'বয়স কমপক্ষে ১৮ বছর হতে হবে।' },
+  age_min_groom: {
+    en: 'A groom must be at least 21 years old (the legal age of marriage for men).',
+    bn: 'পাত্রের বয়স কমপক্ষে ২১ বছর হতে হবে (পুরুষের বিয়ের আইনগত বয়স)।',
+  },
   age_max: { en: 'Please check the date of birth.', bn: 'জন্ম তারিখটি যাচাই করুন।' },
   range: {
     en: 'The maximum must be greater than the minimum.',
@@ -706,6 +748,10 @@ function cleanValue(field, raw) {
       if (!DISTRICTS.some((d) => d.value === raw)) return { error: 'invalid' };
       return { value: String(raw) };
     }
+    case 'upazila': {
+      if (!UPAZILAS.some((u) => u.value === raw)) return { error: 'invalid' };
+      return { value: String(raw) };
+    }
     case 'number': {
       const n = Number(raw);
       if (!Number.isFinite(n) || !Number.isInteger(n)) return { error: 'invalid' };
@@ -758,6 +804,12 @@ export function validateSection(sectionKey, input, { biodata = {}, partial = fal
     if (!isFieldVisible(field, merged)) continue;
     const { value: v, error } = cleanValue(field, src[field.key]);
     if (v !== undefined) value[field.key] = v;
+    // An upazila must belong to the district chosen in the same section.
+    if (field.type === 'upazila' && v !== undefined && districtOfUpazila(v) !== src[field.districtField]) {
+      delete value[field.key];
+      errors[field.key] = 'invalid';
+      continue;
+    }
     if (error && !(partial && error === 'must_agree')) errors[field.key] = error;
     else if (v === undefined && !error && field.required && !partial) errors[field.key] = 'required';
   }
@@ -793,7 +845,10 @@ export function biodataCompletion(biodata) {
   };
 }
 
-/** Removes every private field (names, contact section) for public display. */
+/**
+ * Removes every private field (names, contact section) for public display, and
+ * shortens dates marked `publicPrecision: 'month'` (the date of birth) to YYYY-MM.
+ */
 export function publicSections(biodata) {
   const out = {};
   for (const section of BIODATA_SECTIONS) {
@@ -801,8 +856,11 @@ export function publicSections(biodata) {
     const src = biodata?.[section.key] ?? {};
     const clean = {};
     for (const field of section.fields) {
-      if (field.private) continue;
-      if (src[field.key] !== undefined) clean[field.key] = src[field.key];
+      if (field.private || src[field.key] === undefined) continue;
+      clean[field.key] =
+        field.type === 'date' && field.publicPrecision === 'month'
+          ? String(src[field.key]).slice(0, 7)
+          : src[field.key];
     }
     out[section.key] = clean;
   }
@@ -825,14 +883,41 @@ export function formatFieldValue(field, value, lang = 'en') {
     const d = DISTRICTS.find((x) => x.value === value);
     return d ? d[lang] : String(value);
   }
+  if (field.type === 'upazila') {
+    const u = UPAZILAS.find((x) => x.value === value);
+    return u ? u[lang] : String(value);
+  }
   if (field.type === 'date') {
-    const d = new Date(`${String(value).slice(0, 10)}T00:00:00.000Z`);
+    // A public date of birth arrives as YYYY-MM (see publicSections) and shows as "March 2001".
+    const s = String(value);
+    const monthOnly = /^\d{4}-\d{2}$/.test(s);
+    const d = new Date(`${monthOnly ? `${s}-01` : s.slice(0, 10)}T00:00:00.000Z`);
     return d.toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-GB', {
-      day: 'numeric',
+      ...(monthOnly ? {} : { day: 'numeric' }),
       month: 'long',
       year: 'numeric',
       timeZone: 'UTC',
     });
   }
   return String(value);
+}
+
+/**
+ * Sets one field of a section and clears the fields that depend on it, all the
+ * way down (a new division clears the district, which clears the upazila).
+ * @returns {object} the new section values
+ */
+export function setFieldValue(section, values, key, value) {
+  const next = { ...values, [key]: value };
+  const changed = [key];
+  while (changed.length) {
+    const k = changed.pop();
+    for (const f of section.fields) {
+      if ((f.divisionField === k || f.districtField === k) && next[f.key]) {
+        next[f.key] = '';
+        changed.push(f.key);
+      }
+    }
+  }
+  return next;
 }

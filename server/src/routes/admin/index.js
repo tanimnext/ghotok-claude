@@ -48,6 +48,13 @@ router.put(
   biodata.editSection,
 );
 router.post(
+  '/biodatas/:id/suspend-edit',
+  can('biodata.review'),
+  id,
+  validate({ body: admin.suspendEdit }),
+  biodata.suspendEdit,
+);
+router.post(
   '/biodatas/:id/block',
   can('biodata.review'),
   id,
@@ -100,7 +107,7 @@ router.post(
   '/restore-requests/:id/decline',
   can('recovery.manage'),
   id,
-  validate({ body: admin.note }),
+  validate({ body: admin.declineRestore }),
   biodata.declineRestoreRequest,
 );
 

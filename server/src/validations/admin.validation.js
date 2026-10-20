@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  BIODATA_SECTIONS,
   BIODATA_STATUS,
   NID_STATUS,
   RELIGIONS,
@@ -27,8 +28,28 @@ export const biodatasQuery = z.object({
   ...list,
 });
 
+const correction = z
+  .object({
+    section: z.string(),
+    field: z.string(),
+    note: z.string().trim().max(300).optional(),
+  })
+  .refine(
+    (c) => BIODATA_SECTIONS.some((s) => s.key === c.section && s.fields.some((f) => f.key === c.field)),
+    'Unknown biodata field.',
+  );
+
 export const rejectBiodata = z.object({
   reason: z.string().trim().min(5, 'Tell the user what to change.').max(1000),
+  corrections: z.array(correction).max(60).optional(),
+});
+
+export const suspendEdit = z.object({
+  until: z.coerce
+    .date()
+    .refine((d) => d.getTime() > Date.now(), 'Choose a date in the future.')
+    .nullable(),
+  reason: z.string().trim().max(500).optional(),
 });
 
 export const blockBiodata = z.object({ blocked: z.boolean(), reason: z.string().trim().max(500).optional() });
@@ -36,6 +57,11 @@ export const blockBiodata = z.object({ blocked: z.boolean(), reason: z.string().
 export const deleteBiodata = z.object({ reason: z.string().trim().min(3).max(500) });
 
 export const note = z.object({ note: z.string().trim().max(500).optional() });
+
+export const declineRestore = z.object({
+  note: z.string().trim().max(500).optional(),
+  permanent: z.boolean().optional(),
+});
 
 export const restoreRequestsQuery = z.object({
   status: loose(z.enum(optionValues(RESTORE_STATUS))),
