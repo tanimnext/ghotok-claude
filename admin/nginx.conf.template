@@ -1,0 +1,35 @@
+# nginx site for the admin panel container. ${API_UPSTREAM} is filled in at start-up.
+# Note: nginx only inherits add_header from the server block when a location sets
+# none of its own, so the security headers are repeated where caching headers are added.
+server {
+  listen 80;
+  server_name _;
+  root /usr/share/nginx/html;
+
+  # The API, on the same origin as the panel (it sets its own security headers).
+  location /api/ {
+    proxy_pass ${API_UPSTREAM};
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    client_max_body_size 6m;
+  }
+
+  # Hashed build assets never change.
+  location /assets/ {
+    add_header Cache-Control "public, max-age=31536000, immutable" always;
+    add_header X-Content-Type-Options nosniff always;
+    try_files $uri =404;
+  }
+
+  # Client-side routes all serve index.html, which must not be cached.
+  location / {
+    add_header Cache-Control "no-cache" always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options DENY always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+    add_header X-Robots-Tag "noindex, nofollow" always;
+    try_files $uri /index.html;
+  }
+}

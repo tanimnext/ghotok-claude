@@ -249,9 +249,11 @@ export function DashboardOverview() {
           <Button href="/dashboard/support?new=1" variant="outline" size="sm">
             {t('dash.newTicket')}
           </Button>
-          <Button href="/dashboard/settings#delete" variant="outlineRose" size="sm">
-            {t('dash.delBio')}
-          </Button>
+          {data.biodata && (
+            <Button href="/dashboard/settings#delete" variant="outlineRose" size="sm">
+              {t('dash.delBio')}
+            </Button>
+          )}
         </div>
       </section>
     </>

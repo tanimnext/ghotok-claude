@@ -1,0 +1,75 @@
+# Runs the whole stack locally in containers:
+#   docker compose up --build
+#   docker compose run --rm api node src/scripts/seed.js          # first super admin, packages, pages
+#   docker compose run --rm api node src/scripts/seed.js --demo   # optional demo data
+# Website: http://localhost:3000 · Admin panel: http://localhost:8080
+#
+# The API reads server/.env when it exists; the values below override it for the
+# container network. For production settings see docs/DEPLOYMENT.md.
+
+services:
+  mongo:
+    image: mongo:8
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', 'db.adminCommand("ping").ok']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - path: server/.env
+        required: false
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      MONGODB_URI: mongodb://mongo:27017/ghotok
+      WEB_URL: ${WEB_URL:-http://localhost:3000}
+      ADMIN_URL: ${ADMIN_URL:-http://localhost:8080}
+      API_PUBLIC_URL: ${API_PUBLIC_URL:-http://localhost:3000}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:8080}
+      UPLOAD_DIR: /app/server/uploads
+    volumes:
+      - uploads:/app/server/uploads
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+      args:
+        API_URL: http://api:4000
+        NEXT_PUBLIC_SITE_URL: ${WEB_URL:-http://localhost:3000}
+    restart: unless-stopped
+    environment:
+      API_URL: http://api:4000
+    ports:
+      - '3000:3000'
+    depends_on:
+      - api
+
+  admin:
+    build:
+      context: .
+      dockerfile: admin/Dockerfile
+      args:
+        VITE_WEBSITE_URL: ${WEB_URL:-http://localhost:3000}
+    restart: unless-stopped
+    environment:
+      API_UPSTREAM: http://api:4000
+    ports:
+      - '8080:80'
+    depends_on:
+      - api
+
+volumes:
+  mongo-data:
+  uploads:
