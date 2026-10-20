@@ -115,11 +115,20 @@ Run from the repository root.
 
 - [Architecture](docs/ARCHITECTURE.md): how the pieces fit together, and the reasoning behind them
 - [API reference](docs/API.md)
-- [Deployment](docs/DEPLOYMENT.md): Docker, reverse proxy, Cloudflare, bKash/Nagad, backups
+- [Deployment](docs/DEPLOYMENT.md): Docker, reverse proxy, Cloudflare, bKash/Nagad/SSLCommerz,
+  Google sign-in, backups
+- [Feature parity](docs/FEATURE-PARITY.md): how Ghotok covers every feature of ordhekdeen.com
 - [Contributing](CONTRIBUTING.md): conventions and how to add a biodata field, an endpoint or an
   admin screen
 - [Decision records](docs/adr/)
 - [Changelog](CHANGELOG.md)
+
+### Tooling for Claude Code
+
+`.mcp.json` registers [REA](https://github.com/morluto/rea) (`rea-agents`), an MCP server for
+inspecting websites, bundles and binaries, and `.claude/skills/reverse-engineer-anything/` holds
+its skill. Claude Code offers to enable the server when it opens the project; it needs Node 22
+and network access to npm.
 
 ## বাংলায় সংক্ষেপে
 

@@ -205,6 +205,28 @@ Request a refund from **My dashboard → Connections and billing**.`,
 রিফান্ডের আবেদন করুন **আমার ড্যাশবোর্ড → কানেকশন ও বিলিং** থেকে।`,
     },
   },
+  {
+    slug: 'child-safety',
+    title: { en: 'Child safety policy', bn: 'শিশু সুরক্ষা নীতি' },
+    body: {
+      en: `_Last updated: [date]_
+
+Ghotok is only for adults looking for marriage with their families' knowledge. We do not allow child marriage or any content that puts a child at risk.
+
+- **Age limits:** a bride must be at least 18 and a groom at least 21, as the Child Marriage Restraint Act 2017 requires. The biodata form checks the date of birth and our reviewers check it again, against the NID when one is uploaded.
+- **No minors:** we remove any biodata made for, or showing, someone under the legal age, and we ban the account.
+- **Reporting:** use "Report" on any biodata, or write to [support@ghotok.com.bd]. Reports about a child's safety are reviewed first.
+- **Authorities:** where a child may be in danger, we preserve the records and inform the police or call the national child helpline **1098**.`,
+      bn: `_সর্বশেষ হালনাগাদ: [তারিখ]_
+
+ঘটক কেবল প্রাপ্তবয়স্কদের জন্য, যারা পরিবারের জানাশোনায় বিয়ে করতে চান। বাল্যবিবাহ বা শিশুর জন্য ঝুঁকিপূর্ণ কোনো কিছু এখানে অনুমোদিত নয়।
+
+- **বয়সসীমা:** বাল্যবিবাহ নিরোধ আইন ২০১৭ অনুযায়ী পাত্রীর বয়স কমপক্ষে ১৮ ও পাত্রের কমপক্ষে ২১ বছর হতে হবে। ফর্মে জন্মতারিখ যাচাই হয় এবং রিভিউয়াররা আবার যাচাই করেন; এনআইডি দিলে তার সাথেও মিলিয়ে দেখা হয়।
+- **অপ্রাপ্তবয়স্ক নয়:** আইনি বয়সের কম কারও বায়োডাটা আমরা মুছে ফেলি এবং অ্যাকাউন্ট নিষিদ্ধ করি।
+- **রিপোর্ট:** যেকোনো বায়োডাটায় "রিপোর্ট" ব্যবহার করুন অথবা [support@ghotok.com.bd] এ লিখুন। শিশুর নিরাপত্তা সংক্রান্ত রিপোর্ট সবার আগে দেখা হয়।
+- **কর্তৃপক্ষ:** কোনো শিশু বিপদে থাকতে পারে মনে হলে আমরা তথ্য সংরক্ষণ করি এবং পুলিশকে জানাই বা জাতীয় শিশু হেল্পলাইন **১০৯৮** এ যোগাযোগ করি।`,
+    },
+  },
 ];
 
 export const FAQS = [

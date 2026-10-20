@@ -12,6 +12,7 @@ import {
   Biodata,
   ContactMessage,
   Faq,
+  MarriageReport,
   Package,
   Page,
   Payment,
@@ -210,6 +211,35 @@ async function seedDemo(admin) {
     biodata: deleted._id,
     user: users[9]._id,
     reason: 'I want to start looking again.',
+  });
+  // Two couples who married through Ghotok: one story published, one waiting for staff.
+  const [bride, groom] = [biodatas[16], biodatas[17]];
+  for (const b of [bride, groom]) {
+    b.deletedAt = new Date(Date.now() - 20 * 864e5);
+    b.deleteReason = 'married_via_ghotok';
+    await b.save();
+  }
+  await MarriageReport.create({
+    user: bride.user,
+    biodata: bride._id,
+    viaGhotok: true,
+    marriedOn: new Date(Date.now() - 40 * 864e5),
+    partnerBiodata: groom._id,
+    story: 'Our families talked for two months before the wedding. Thank you, Ghotok.',
+    shareStory: true,
+    storyStatus: 'published',
+    publishedStory:
+      'Our families met through Ghotok and talked for two months. Both families felt at ease from the first visit. Thank you for making it simple and respectful.',
+    publishedAt: new Date(Date.now() - 10 * 864e5),
+  });
+  await MarriageReport.create({
+    user: groom.user,
+    biodata: groom._id,
+    viaGhotok: true,
+    marriedOn: new Date(Date.now() - 40 * 864e5),
+    partnerBiodata: bride._id,
+    story: 'We found each other here. Our parents handled everything with great care.',
+    shareStory: true,
   });
   await ContactMessage.create({
     name: 'Rahima Begum',

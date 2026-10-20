@@ -175,10 +175,33 @@ Online checkout is optional:
   either as PEM or as the bare base64 key body Nagad provides, and the production
   `NAGAD_BASE_URL`.
 
-Gateways redirect the member back to `API_PUBLIC_URL/api/payments/<method>/callback`. Give the
-gateway that URL if it asks for an allow-list. The API confirms the payment with the gateway (and
-that the amount matches) before crediting, then sends the member to their *Connections* page.
-Test the whole flow in the sandbox first.
+- **SSLCommerz** (cards, internet banking and every mobile wallet on one hosted page). Ask
+  SSLCommerz for a store, set `SSLCOMMERZ_ENABLED=true`, `SSLCOMMERZ_STORE_ID`,
+  `SSLCOMMERZ_STORE_PASSWORD`, and change `SSLCOMMERZ_BASE_URL` from the sandbox
+  (`https://sandbox.sslcommerz.com`) to `https://securepay.sslcommerz.com`. SSLCommerz has no
+  manual "Send Money" option, so it only appears on the website when it is enabled.
+
+bKash and Nagad redirect the member back to `API_PUBLIC_URL/api/payments/<method>/callback`.
+SSLCommerz posts its result to `API_PUBLIC_URL/api/gateway/sslcommerz/return` and its IPN
+(server-to-server notice) to `API_PUBLIC_URL/api/gateway/sslcommerz/ipn`; set that IPN URL in the
+SSLCommerz merchant panel too. Give the gateways these URLs if they ask for an allow-list. The API
+confirms every payment with the gateway (and that the amount matches) before crediting, then sends
+the member to the receipt page, `WEB_URL/dashboard/payment/<invoice>`. Test the whole flow in the
+sandbox first.
+
+**Discounts and gifts** are set in *Site settings → Payments*: the connections given once when a
+member's biodata is first approved (`approvalGift`, default 1) and a package discount for members
+with an approved biodata (`approvedDiscountPercent`, default 0 = off).
+
+## 6a. Google sign-in (optional)
+
+1. In the Google Cloud console create an *OAuth client ID* of type *Web application*.
+2. Add the authorised redirect URI `API_PUBLIC_URL/api/auth/google/callback`
+   (e.g. `https://ghotok.com.bd/api/auth/google/callback`).
+3. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` and restart the API.
+
+The website shows "Continue with Google" only when both are set. A Google account whose verified
+email matches an existing account signs in to that account.
 
 ## 7. Email and SMS
 

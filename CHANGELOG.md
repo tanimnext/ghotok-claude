@@ -6,6 +6,32 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+Feature parity with ordhekdeen.com; see [docs/FEATURE-PARITY.md](docs/FEATURE-PARITY.md).
+
+### Added
+
+- **Search**: upazila-level permanent and present address filters with live counts, education
+  medium, special categories, oldest-first sort, "seen" markers and shortlisting from the results.
+- **Biodata lifecycle**: pledge before creation, field-level corrections from reviewers, edit
+  suspension, hiding with a reason, a marriage report with partner lookup when deleting, instant
+  restore of never-approved biodatas, permanent restore declines, a connections gift on first
+  approval, a month-only public date of birth and the legal minimum age for grooms (21).
+- **Success stories** from marriage reports shared with consent, moderated by staff.
+- **Banners**: downloadable promotional banners managed in the admin panel.
+- **Support**: file attachments (images, PDF, video) on tickets and reports; a report opens a
+  linked ticket and can refund the reporter's connection; replying reopens a closed ticket.
+- **Payments**: SSLCommerz checkout, receipt page, discount for members with an approved biodata.
+- **Sign-in**: one-time code, Google, "remember me", signed-in devices and sign out everywhere.
+  Changing the password signs other devices out.
+- Child safety policy page, tutorial video and app download links in site settings,
+  notification delete.
+- REA (reverse-engineering MCP server and skill) configured for Claude Code in `.mcp.json`.
+
+### Changed
+
+- Creating a biodata needs the pledge; hiding one needs a reason.
+- Gateway payments return to the receipt page instead of the connections page.
+
 ## [1.0.0] - 2026-10-20
 
 First complete release.

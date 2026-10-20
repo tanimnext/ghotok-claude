@@ -10,7 +10,9 @@ the code disagree.
 
 **Authentication.** Logging in sets `HttpOnly` cookies (`gh_at` access token, `gh_rt` refresh
 token) and a readable `gh_session=1` hint. Browsers send them automatically. Other clients can
-send `Authorization: Bearer <access token>`.
+send `Authorization: Bearer <access token>`. Every sign-in starts a session "family" (one per
+device); the access token names it in its `sid` claim. With `remember: false` the cookies end
+with the browser session and the server session expires after a day.
 
 | Marker | Meaning |
 | --- | --- |
@@ -29,7 +31,9 @@ send `Authorization: Bearer <access token>`.
 Switch on `code`, never on `message`. Common codes: `VALIDATION_ERROR`, `UNAUTHORIZED`,
 `TOKEN_EXPIRED`, `SESSION_EXPIRED`, `NOT_VERIFIED`, `ACCOUNT_INACTIVE`, `FORBIDDEN`, `NOT_FOUND`,
 `NOT_PENDING` (someone already processed it), `INSUFFICIENT_CONNECTIONS` (402), `RATE_LIMITED`
-(429), `BAD_ORIGIN`, `SERVER_ERROR`.
+(429), `BAD_ORIGIN`, `SERVER_ERROR`. Biodata lifecycle codes: `PLEDGE_REQUIRED`, `EDIT_SUSPENDED`
+(`details.until`), `CORRECTIONS_PENDING`, `RESTORE_NEEDS_APPROVAL`, `RESTORE_BLOCKED`,
+`ALREADY_REPORTED` (`details.ticketId`).
 
 **Lists** return `{ items, total, page, limit, pages }` and accept `?page=` and `?limit=`.
 
@@ -50,7 +54,11 @@ favourite, proposals, payments, uploads) have tighter limits than the general AP
 | Method | Path | Access | Body / notes |
 | --- | --- | --- | --- |
 | POST | `/auth/register` | public | `{ name, email?, phone?, password, language? }`, email or phone required. Sends an OTP |
-| POST | `/auth/login` | public | `{ identifier, password }`, identifier is an email or mobile number. Sets cookies |
+| POST | `/auth/login` | public | `{ identifier, password, remember? }`, identifier is an email or mobile number. Sets cookies |
+| POST | `/auth/login/code` | public | `{ identifier }`, sends a one-time sign-in code (same answer whether or not the account exists) |
+| POST | `/auth/login/code/verify` | public | `{ identifier, code, remember? }`, signs in with the code |
+| GET | `/auth/google/start` | public | `?next=/path&remember=0\|1`, redirects to Google. 404 when Google sign-in is not configured |
+| GET | `/auth/google/callback` | Google | Checks state and the ID token, signs in (creating or linking the account by verified email) and redirects to the website (`/login?error=google\|inactive` on failure) |
 | POST | `/auth/verify` | public | `{ identifier, code }`, verifies the account and signs in |
 | POST | `/auth/resend-otp` | public | `{ identifier, purpose: 'verify' \| 'reset' }` |
 | POST | `/auth/forgot-password` | public | `{ identifier }`, answers the same way whether or not the account exists |
@@ -58,6 +66,9 @@ favourite, proposals, payments, uploads) have tighter limits than the general AP
 | POST | `/auth/refresh` | refresh cookie | Rotates the refresh token |
 | POST | `/auth/logout` | – | Revokes the session and clears cookies |
 | GET | `/auth/me` | auth | `{ user }` |
+| GET | `/auth/sessions` | auth | Signed-in devices: `{ items: [{ id, userAgent, ip, lastActiveAt, current }] }` |
+| DELETE | `/auth/sessions/:id` | auth | Signs one device out |
+| POST | `/auth/logout-all` | auth | Signs out every device, this one included |
 
 With `OTP_DEV_ECHO=true` (development only) responses that send a code include it as `devOtp`.
 
@@ -67,7 +78,7 @@ With `OTP_DEV_ECHO=true` (development only) responses that send a code include i
 | --- | --- | --- |
 | GET | `/me/dashboard` | Biodata summary, connection balance, visit stats, counts, recent proposals |
 | PATCH | `/me` | `{ name?, language? }` |
-| POST | `/me/change-password` | `{ currentPassword, newPassword }` |
+| POST | `/me/change-password` | `{ currentPassword, newPassword }`, signs other devices out: `{ ok, signedOut }` |
 | DELETE | `/me` | `{ password, reason? }`, deactivates the account |
 | GET | `/me/favorites`, `/me/dislikes`, `/me/favorited-me`, `/me/unlocks` | Personal lists |
 | GET | `/me/connections` | Balance and ledger |
@@ -76,6 +87,7 @@ With `OTP_DEV_ECHO=true` (development only) responses that send a code include i
 | POST | `/me/proposals/:id/withdraw` | |
 | GET | `/me/notifications` | |
 | POST | `/me/notifications/read-all`, `/me/notifications/:id/read` | |
+| DELETE | `/me/notifications/:id` | |
 
 ## Biodatas: `/biodatas`
 
@@ -84,12 +96,14 @@ The member's own biodata:
 | Method | Path | Access | Body / notes |
 | --- | --- | --- | --- |
 | GET | `/biodatas/me` | auth | `{ biodata, completion }`, `biodata` is null before creation |
-| POST | `/biodatas/me` | verified | Creates an empty draft |
-| PUT | `/biodatas/me/sections/:section` | verified | `{ data }`, one section, validated with the shared definition. Editing an approved biodata sends it back to review |
-| POST | `/biodatas/me/submit` | verified | Submits a complete biodata for review |
-| PATCH | `/biodatas/me/visibility` | auth | `{ hidden }` |
-| DELETE | `/biodatas/me` | auth | `{ reason, note? }`, soft delete |
-| GET / POST | `/biodatas/me/restore-request` | auth | `{ reason? }`, asks staff to restore a deleted biodata |
+| POST | `/biodatas/me` | verified | `{ pledge: true }`, accepts the pledge and creates an empty draft |
+| PUT | `/biodatas/me/sections/:section` | verified | `{ data }`, one section, validated with the shared definition. Editing an approved biodata sends it back to review. `EDIT_SUSPENDED` while staff have suspended editing |
+| POST | `/biodatas/me/submit` | verified | Submits a complete biodata for review (`CORRECTIONS_PENDING` until every requested correction is changed) |
+| PATCH | `/biodatas/me/visibility` | auth | `{ hidden, reason?, note? }`, hiding needs a reason from `HIDE_REASONS` (and a note for `other`) |
+| DELETE | `/biodatas/me` | auth | `{ reason, note?, marriage? }`, soft delete. With a marriage reason, `marriage` is `{ marriedOn?, place?, partnerBiodataNo?, partner?, story?, shareStory? }` and becomes a marriage report |
+| POST | `/biodatas/me/restore` | auth | Restores a deleted biodata that was never approved; otherwise `RESTORE_NEEDS_APPROVAL` |
+| GET / POST | `/biodatas/me/restore-request` | auth | `{ reason? }`, asks staff to restore a deleted biodata (`RESTORE_BLOCKED` after a permanent decline) |
+| GET | `/biodatas/partner-lookup` | auth | `?no=GH-1024`, the partner's public summary for the marriage form |
 | GET | `/biodatas/me/stats` | auth | Visits today / 7 days / 30 days, favourites |
 | POST | `/biodatas/me/photo/upload-url` | verified | Returns an upload target and a `ticket` |
 | POST | `/biodatas/me/photo` | verified | `{ ticket, visibility? }`, attaches the uploaded photo |
@@ -102,25 +116,28 @@ Browsing and interacting (`:no` is a biodata number such as `GH-1005`):
 
 | Method | Path | Access | Body / notes |
 | --- | --- | --- | --- |
-| GET | `/biodatas` | public | Search. `?type&religion&marital&complexion&profession&economic&division&district&ageMin&ageMax&heightMin&heightMax&education&nid&q&sort&page&limit` (`district` takes a comma-separated list) |
+| GET | `/biodatas` | public | Search. `?type&religion&marital&complexion&profession&economic&division&district&upazila&presentDistrict&presentUpazila&ageMin&ageMax&heightMin&heightMax&education&medium&category&nid&q&sort&page&limit` (list filters take comma-separated values; `sort` is `newest`, `oldest`, …). Signed-in viewers also get `seen` and `favorited` flags |
+| GET | `/biodatas/location-counts` | public | Same filters plus `scope=permanent\|present`: `{ divisions, districts, upazilas }` counts that ignore the location being picked |
 | GET | `/biodatas/featured` | public | `?limit=` (1–12) |
 | GET | `/biodatas/:no` | public | Public profile (no private fields) |
 | POST | `/biodatas/:no/visit` | public | Counts a profile visit (once per visitor per day) |
-| GET | `/biodatas/:no/viewer` | auth | The viewer's state: unlocked (with contact), favourite, dislike, proposal |
+| GET | `/biodatas/:no/viewer` | auth | The viewer's state: unlocked (with contact), favourite, dislike, proposal, `refunded`, `report: { status, ticketId }` |
 | POST | `/biodatas/:no/unlock` | verified | Spends one connection (402 `INSUFFICIENT_CONNECTIONS`); unlocking again is free. Returns the guardian contact |
 | POST / DELETE | `/biodatas/:no/favorite` | auth | |
 | POST / DELETE | `/biodatas/:no/dislike` | auth | |
 | POST | `/biodatas/:no/proposals` | verified | `{ message? }` |
-| POST | `/biodatas/:no/report` | auth | `{ reason, details? }` |
+| POST | `/biodatas/:no/report` | auth | `{ reason, details?, attachments? }`, opens a linked support ticket |
 
 ## Packages, payments and refunds
 
 | Method | Path | Access | Body / notes |
 | --- | --- | --- | --- |
-| GET | `/packages` | public | Active packages and enabled payment methods (with Send Money numbers) |
-| POST | `/payments` | verified | `{ packageId, method: 'bkash' \| 'nagad' \| 'rocket', mode: 'manual' \| 'gateway', senderNumber?, trxId? }`. Manual payments need the sender number and transaction ID and wait for staff. Gateway mode returns a `redirectURL` |
+| GET | `/packages` | public | Active packages (with `discountPercent` and `finalPrice` for the viewer) and enabled payment methods (with Send Money numbers; `gatewayOnly` methods have none) |
+| POST | `/payments` | verified | `{ packageId, method: 'bkash' \| 'nagad' \| 'rocket' \| 'sslcommerz', mode: 'manual' \| 'gateway', senderNumber?, trxId? }`. Manual payments need the sender number and transaction ID and wait for staff. Gateway mode returns a `redirectURL` |
 | GET | `/payments/mine` | auth | |
-| GET | `/payments/:method/callback` | gateway | bKash/Nagad return URL; confirms with the gateway, credits, then redirects to the website |
+| GET | `/payments/status/:invoiceNo` | auth | One of the member's own payments, for the receipt page |
+| GET | `/payments/:method/callback` | gateway | bKash/Nagad return URL; confirms with the gateway, credits, then redirects to `/dashboard/payment/<invoice>?result=` on the website |
+| POST | `/gateway/:method/return`, `/gateway/:method/ipn` | gateway | SSLCommerz form postbacks (mounted outside the origin check; every result is re-validated with SSLCommerz) |
 | POST | `/refunds` | auth | `{ paymentId, reason }` |
 | GET | `/refunds/mine` | auth | |
 
@@ -128,13 +145,17 @@ Browsing and interacting (`:no` is a biodata number such as `GH-1005`):
 
 | Method | Path | Access | Body / notes |
 | --- | --- | --- | --- |
-| GET / POST | `/tickets` | auth | Create: `{ subject, category, message }` |
-| GET | `/tickets/:id` | auth | Own tickets only |
-| POST | `/tickets/:id/messages` | auth | `{ message }` |
+| GET / POST | `/tickets` | auth | Create: `{ subject, category, message, attachments? }` |
+| POST | `/tickets/attachments/upload-url` | auth | `{ contentType, size }`, returns an upload target and a `ticket` for `attachments` (images 5 MB, PDF 10 MB, MP4/WebM 25 MB) |
+| GET | `/tickets/:id` | auth | Own tickets only; marks staff replies as read |
+| POST | `/tickets/:id/messages` | auth | `{ message?, attachments? }`, text or a file. Replying to a closed ticket reopens it |
 | POST | `/tickets/:id/close` | auth | |
 | POST | `/contact` | public | `{ name, email?, phone?, subject?, message }` |
 | GET | `/public/stats` | public | Home page statistics |
-| GET | `/public/settings` | public | Site name, tagline, contact details |
+| GET | `/public/settings` | public | Site name, tagline, contact details, app link, tutorial videos, payment info (approval gift, discount, enabled gateways), `auth.google` |
+| GET | `/public/success-stories` | public | Published marriage stories |
+| GET | `/public/banners` | public | Active promotional banners |
+| POST | `/public/banners/:id/download` | public | Counts the download, returns a short-lived `url` |
 | GET | `/public/pages/:slug` | public | A published CMS page |
 | GET | `/public/faqs` | public | Active FAQs |
 
@@ -142,7 +163,7 @@ Browsing and interacting (`:no` is a biodata number such as `GH-1005`):
 
 | Method | Path | Notes |
 | --- | --- | --- |
-| PUT | `/uploads/local/:token` | Raw image body (JPEG, PNG or WebP, up to 5 MB), authorised by the signed token from an `upload-url` call |
+| PUT | `/uploads/local/:token` | Raw file body of the type the signed token allows (JPEG, PNG or WebP up to 5 MB; PDF up to 10 MB; MP4 or WebM up to 25 MB), checked by its magic bytes |
 | GET | `/uploads/file/:token` | Serves a stored file for a short-lived signed token |
 
 With `STORAGE_DRIVER=cloudflare` the upload targets point at Cloudflare Images and R2 instead and
@@ -167,7 +188,8 @@ Every route needs a staff account (`admin.access`) plus the permission shown.
 | GET | `/admin/biodatas` | `biodata.review` | `?status&nid&type&religion&hidden&blocked&deleted=true\|false\|all&q` |
 | GET | `/admin/biodatas/:id` | `biodata.review` | Full biodata, completion, owner, activity, reports, restore request |
 | POST | `/admin/biodatas/:id/approve` | `biodata.review` | Fails with `INCOMPLETE`, or `NID_REQUIRED` when the moderation setting requires it |
-| POST | `/admin/biodatas/:id/reject` | `biodata.review` | `{ reason }`, the owner sees it |
+| POST | `/admin/biodatas/:id/reject` | `biodata.review` | `{ reason, corrections? }`, the owner sees it. `corrections` is `[{ section, field, note }]`; the owner must change those fields before resubmitting |
+| POST | `/admin/biodatas/:id/suspend-edit` | `biodata.review` | `{ until, reason? }`, blocks the owner's edits until the date (`until: null` lifts it) |
 | PUT | `/admin/biodatas/:id/sections/:section` | `biodata.edit` | `{ data }`, staff correction |
 | POST | `/admin/biodatas/:id/block` | `biodata.review` | `{ blocked, reason? }`, hide from or show to the public |
 | POST | `/admin/biodatas/:id/delete` | `biodata.review` | `{ reason }` |
@@ -177,7 +199,7 @@ Every route needs a staff account (`admin.access`) plus the permission shown.
 | POST | `/admin/biodatas/:id/nid/reject` | `nid.verify` | `{ note }` |
 | GET | `/admin/restore-requests` | `recovery.manage` | `?status=pending\|approved\|declined` |
 | POST | `/admin/restore-requests/:id/approve` | `recovery.manage` | `{ note? }` |
-| POST | `/admin/restore-requests/:id/decline` | `recovery.manage` | `{ note? }` |
+| POST | `/admin/restore-requests/:id/decline` | `recovery.manage` | `{ note?, permanent? }`, a permanent decline blocks further requests |
 
 **Users**
 
@@ -209,7 +231,7 @@ Every route needs a staff account (`admin.access`) plus the permission shown.
 | Method | Path | Permission | Body / notes |
 | --- | --- | --- | --- |
 | GET | `/admin/reports` | `reports.manage` | `?status=active\|open\|in_review\|resolved\|dismissed` |
-| PATCH | `/admin/reports/:id` | `reports.manage` | `{ status, actionTaken? }`, the reporter is notified when closed |
+| PATCH | `/admin/reports/:id` | `reports.manage` | `{ status, actionTaken?, refundConnection? }`, the outcome is posted to the linked ticket; `refundConnection` returns the reporter's connection once |
 | GET | `/admin/tickets` | `tickets.manage` | `?status=active\|open\|waiting\|answered\|closed&category&q` |
 | GET | `/admin/tickets/:id` | `tickets.manage` | With messages |
 | POST | `/admin/tickets/:id/messages` | `tickets.manage` | `{ message, close? }` |
@@ -227,3 +249,8 @@ Every route needs a staff account (`admin.access`) plus the permission shown.
 | GET / PUT / DELETE | `/admin/pages/:slug` | `content.manage` | `{ title: { en, bn }, body: { en, bn }, isPublished }`, body is Markdown |
 | GET / POST | `/admin/faqs` | `content.manage` | `{ question: { en, bn }, answer: { en, bn }, category?, sortOrder?, isActive? }` |
 | PATCH / DELETE | `/admin/faqs/:id` | `content.manage` | |
+| GET | `/admin/marriage-reports` | `content.manage` | `?storyStatus=pending\|published\|hidden` |
+| PATCH | `/admin/marriage-reports/:id` | `content.manage` | `{ storyStatus?, publishedStory? }`; only stories shared with consent can be published |
+| GET / POST | `/admin/banners` | `content.manage` | Create: `{ title: { en, bn? }, previewTicket, fileTicket, isActive?, sortOrder? }` |
+| POST | `/admin/banners/upload-url` | `content.manage` | `{ kind: 'preview' \| 'file', contentType, size }` (preview is an image, file is a PDF) |
+| PATCH / DELETE | `/admin/banners/:id` | `content.manage` | |
