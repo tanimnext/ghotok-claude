@@ -654,7 +654,7 @@ const en = {
     method: 'Payment method',
     trx: 'Transaction ID',
     amount: 'Amount paid',
-    credited: 'Connections added',
+    credited: 'Connections added on',
     print: 'Print',
     checking: 'We are confirming the payment with the gateway. This page updates by itself.',
   },
