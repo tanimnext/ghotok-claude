@@ -1,3 +1,4 @@
+import { createTranslator as createSharedTranslator } from '@ghotok/shared';
 import bn from './bn.js';
 import en from './en.js';
 
@@ -14,17 +15,7 @@ export function resolveLang(value) {
   return LANGUAGES.includes(value) ? value : DEFAULT_LANG;
 }
 
-const lookup = (dict, key) => key.split('.').reduce((node, part) => node?.[part], dict);
-
-/**
- * Returns `t(key, vars)` for a language. Missing Bangla text falls back to English,
- * then to the key itself. `{name}` placeholders are filled from `vars`.
- */
+/** `t(key, vars)` for a language; missing Bangla text falls back to English. */
 export function createTranslator(lang) {
-  const dict = dictionaries[resolveLang(lang)];
-  return function t(key, vars) {
-    const value = lookup(dict, key) ?? lookup(en, key) ?? key;
-    if (typeof value !== 'string' || !vars) return value;
-    return value.replace(/\{(\w+)\}/g, (_, name) => (vars[name] ?? '').toString());
-  };
+  return createSharedTranslator(dictionaries[resolveLang(lang)], en);
 }

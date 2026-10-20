@@ -2,7 +2,7 @@
 
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Button, FormMessage, TextArea, TextInput } from '@/components/ui';
+import { Button, FormMessage, TextArea, TextInput } from '@ghotok/ui';
 import { useErrorMessage } from '@/hooks/use-error-message';
 import { supportApi } from '@/lib/api/endpoints';
 import { validate } from '@/lib/validators';

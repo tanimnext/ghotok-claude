@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { NID_STATUS, optionLabel } from '@ghotok/shared';
-import { Button, Card, FormMessage, Pill, STATUS_TONE } from '@/components/ui';
+import { Button, Card, FormMessage, Pill, STATUS_TONE } from '@ghotok/ui';
 import { useErrorMessage } from '@/hooks/use-error-message';
 import { biodataApi } from '@/lib/api/endpoints';
 import { useT } from '@/providers/PreferencesProvider';

@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 import { PHOTO_VISIBILITY } from '@ghotok/shared';
 import { ArchPortrait } from '@/components/biodata/ArchPortrait';
-import { Button, Card, FormMessage, SelectInput } from '@/components/ui';
+import { Button, Card, FormMessage, SelectInput } from '@ghotok/ui';
 import { useErrorMessage } from '@/hooks/use-error-message';
 import { biodataApi } from '@/lib/api/endpoints';
 import { useT } from '@/providers/PreferencesProvider';

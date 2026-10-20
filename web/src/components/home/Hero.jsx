@@ -1,5 +1,5 @@
 import { DISTRICTS, optionLabel } from '@ghotok/shared';
-import { Button, Icon } from '@/components/ui';
+import { Button, Icon } from '@ghotok/ui';
 
 /** The landing hero: headline, calls to action, trust points and the arch illustration. */
 export function Hero({ t, lang }) {

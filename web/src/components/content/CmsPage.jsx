@@ -15,7 +15,7 @@ export async function cmsMetadata(slug) {
 }
 
 /**
- * A page whose content staff edit in Admin → Content (about, guide, policies).
+ * A page whose content staff edit in Admin → Pages and FAQs (about, guide, policies, …).
  * Falls back to English when the Bangla text is empty.
  */
 export async function CmsPage({ slug }) {

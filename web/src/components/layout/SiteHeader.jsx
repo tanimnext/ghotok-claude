@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Icon } from '@/components/ui';
+import { Icon } from '@ghotok/ui';
 import { useT } from '@/providers/PreferencesProvider';
 import { AccountMenu } from './AccountMenu.jsx';
 import { Logo } from './Logo.jsx';

@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { GUARDIAN_RELATIONS, optionLabel } from '@ghotok/shared';
 import { BiodataCard } from '@/components/biodata/BiodataCard';
-import { Button, EmptyState, Icon, LoadingBlock, Pagination } from '@/components/ui';
+import { Button, EmptyState, Icon, LoadingBlock, Pagination } from '@ghotok/ui';
 import { accountApi, biodataApi } from '@/lib/api/endpoints';
 import { date } from '@/lib/format';
 import { useT } from '@/providers/PreferencesProvider';

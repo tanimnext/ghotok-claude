@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { RELIGIONS } from '@ghotok/shared';
 import { BiodataCard } from '@/components/biodata/BiodataCard';
 import { LogoMark } from '@/components/layout/Logo';
-import { Button, Heading } from '@/components/ui';
+import { Button, Heading } from '@ghotok/ui';
 import { digits, number, taka } from '@/lib/format';
 
 // The remaining home page bands. They are Server Components that receive the

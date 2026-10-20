@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Button } from '@/components/ui';
+import { Button } from '@ghotok/ui';
 import { useT } from '@/providers/PreferencesProvider';
 
 /** Shown when a page fails to render, e.g. while the API is unreachable. */

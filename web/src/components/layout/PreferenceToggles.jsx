@@ -1,6 +1,6 @@
 'use client';
 
-import { Icon } from '@/components/ui';
+import { Icon } from '@ghotok/ui';
 import { usePreferences } from '@/providers/PreferencesProvider';
 
 function Segment({ label, children }) {

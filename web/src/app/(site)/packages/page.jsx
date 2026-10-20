@@ -1,5 +1,5 @@
 import { Checkout } from '@/components/billing/Checkout';
-import { EmptyState } from '@/components/ui';
+import { EmptyState } from '@ghotok/ui';
 import { getPublic } from '@/lib/api/server';
 import { getTranslator } from '@/lib/preferences.server';
 

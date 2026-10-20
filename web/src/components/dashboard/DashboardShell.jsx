@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Logo } from '@/components/layout/Logo';
 import { PreferenceToggles } from '@/components/layout/PreferenceToggles';
-import { Icon, LoadingBlock } from '@/components/ui';
+import { Icon, LoadingBlock } from '@ghotok/ui';
 import { useAuth, useLogout } from '@/hooks/use-auth';
 import { accountApi } from '@/lib/api/endpoints';
 import { digits } from '@/lib/format';

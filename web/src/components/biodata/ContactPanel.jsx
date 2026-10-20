@@ -4,13 +4,13 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState } from 'react';
 import { GUARDIAN_RELATIONS, optionLabel } from '@ghotok/shared';
-import { Button, FormMessage, Icon, Modal, TextArea } from '@/components/ui';
+import { Button, FormMessage, Icon, Modal, TextArea } from '@ghotok/ui';
 import { AUTH_KEY, useAuth } from '@/hooks/use-auth';
 import { useErrorMessage } from '@/hooks/use-error-message';
 import { biodataApi } from '@/lib/api/endpoints';
 import { digits } from '@/lib/format';
 import { useT } from '@/providers/PreferencesProvider';
-import { useToast } from '@/providers/ToastProvider';
+import { useToast } from '@ghotok/ui';
 import { useViewerState } from './BiodataActions.jsx';
 
 function ContactRow({ label, value, href }) {

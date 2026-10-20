@@ -1,6 +1,6 @@
 'use client';
 
-import { Icon } from '@/components/ui';
+import { Icon } from '@ghotok/ui';
 import { useViewerState } from './BiodataActions.jsx';
 
 /** Round profile photo for the detail page; locked until unlock when the owner chose so. */

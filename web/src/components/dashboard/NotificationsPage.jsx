@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState } from 'react';
-import { Button, EmptyState, LoadingBlock, Pagination } from '@/components/ui';
+import { Button, EmptyState, LoadingBlock, Pagination } from '@ghotok/ui';
 import { accountApi } from '@/lib/api/endpoints';
 import { dateTime, digits } from '@/lib/format';
 import { useT } from '@/providers/PreferencesProvider';

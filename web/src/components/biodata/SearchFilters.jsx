@@ -14,7 +14,7 @@ import {
   RELIGIONS,
   districtsOf,
 } from '@ghotok/shared';
-import { Button, Checkbox, Icon } from '@/components/ui';
+import { Button, Checkbox, Icon } from '@ghotok/ui';
 import { toQueryString } from '@/lib/search-params';
 import { useT } from '@/providers/PreferencesProvider';
 

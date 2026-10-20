@@ -6,6 +6,7 @@
   "type": "module",
   "workspaces": [
     "shared",
+    "ui",
     "server",
     "web",
     "admin"
@@ -24,7 +25,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "npm test -w shared && npm test -w server && npm test -w web",
+    "test": "npm test -w shared && npm test -w server && npm test -w web && npm test -w admin",
     "build": "npm run build -w web && npm run build -w admin",
     "check": "npm run lint && npm run format:check && npm test && npm run build",
     "start": "concurrently -n api,web \"npm start -w server\" \"npm start -w web\""

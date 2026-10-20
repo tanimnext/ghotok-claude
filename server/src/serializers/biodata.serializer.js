@@ -91,6 +91,7 @@ export function toAdminRow(b) {
     age: ageFromDob(b.birthDate),
     completion: b.completion,
     nidStatus: b.nid?.status ?? 'not_submitted',
+    nidSubmittedAt: b.nid?.submittedAt ?? null,
     isHidden: b.isHidden,
     blocked: !!b.blocked,
     deletedAt: b.deletedAt ?? null,

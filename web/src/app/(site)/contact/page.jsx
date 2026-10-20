@@ -1,5 +1,5 @@
 import { ContactForm } from '@/components/content/ContactForm';
-import { Icon } from '@/components/ui';
+import { Icon } from '@ghotok/ui';
 import { getPublicOr } from '@/lib/api/server';
 import { getTranslator } from '@/lib/preferences.server';
 

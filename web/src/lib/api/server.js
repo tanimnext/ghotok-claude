@@ -1,3 +1,5 @@
+import { unstable_rethrow as rethrowNextSignals } from 'next/navigation';
+
 // Server Components fetch the API directly (not through the /api rewrite).
 // Only public, non-personal data is fetched on the server; anything that depends
 // on the signed-in member is loaded in the browser with the client API.
@@ -17,6 +19,8 @@ export async function getPublic(path, { revalidate } = {}) {
   try {
     res = await fetch(`${API_URL}/api${path}`, revalidate ? { next: { revalidate } } : { cache: 'no-store' });
   } catch (err) {
+    // Next.js signals dynamic rendering by throwing from fetch; let it through.
+    rethrowNextSignals(err);
     throw new ApiUnavailableError(`API unreachable for ${path}: ${err.message}`);
   }
   if (res.status === 404) return null;
@@ -29,6 +33,7 @@ export async function getPublicOr(fallback, path, options) {
   try {
     return (await getPublic(path, options)) ?? fallback;
   } catch (err) {
+    rethrowNextSignals(err);
     console.error(err.message);
     return fallback;
   }

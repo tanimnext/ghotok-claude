@@ -1,9 +1,10 @@
 'use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import Link from 'next/link';
 import { useState } from 'react';
+import { ToastProvider, UiProvider } from '@ghotok/ui';
 import { PreferencesProvider } from './PreferencesProvider.jsx';
-import { ToastProvider } from './ToastProvider.jsx';
 
 function createQueryClient() {
   return new QueryClient({
@@ -24,7 +25,9 @@ export function AppProviders({ lang, theme, children }) {
   return (
     <QueryClientProvider client={queryClient}>
       <PreferencesProvider initialLang={lang} initialTheme={theme}>
-        <ToastProvider>{children}</ToastProvider>
+        <UiProvider linkComponent={Link}>
+          <ToastProvider>{children}</ToastProvider>
+        </UiProvider>
       </PreferencesProvider>
     </QueryClientProvider>
   );

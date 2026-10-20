@@ -5,12 +5,12 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { PROPOSAL_STATUS, optionLabel } from '@ghotok/shared';
 import { cardText } from '@/components/biodata/biodata-text';
-import { Button, EmptyState, LoadingBlock, Pagination, Pill, STATUS_TONE } from '@/components/ui';
+import { Button, EmptyState, LoadingBlock, Pagination, Pill, STATUS_TONE } from '@ghotok/ui';
 import { useErrorMessage } from '@/hooks/use-error-message';
 import { accountApi } from '@/lib/api/endpoints';
 import { date } from '@/lib/format';
 import { useT } from '@/providers/PreferencesProvider';
-import { useToast } from '@/providers/ToastProvider';
+import { useToast } from '@ghotok/ui';
 import { PageTitle } from './DashboardShell.jsx';
 
 function Tabs({ box, onChange }) {

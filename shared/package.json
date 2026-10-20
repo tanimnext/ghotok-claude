@@ -2,17 +2,29 @@
   "name": "@ghotok/shared",
   "version": "1.0.0",
   "private": true,
-  "description": "Constants, option labels (EN/BN), locations, biodata form schema and permissions shared by the API, web client and admin panel.",
+  "description": "Code shared by the API, the website and the admin panel: option lists with English/Bangla labels, Bangladesh locations, the biodata form schema and validator, role permissions, display formatting, the browser API client and the design tokens.",
   "type": "module",
   "main": "./src/index.js",
   "exports": {
-    ".": "./src/index.js"
+    ".": "./src/index.js",
+    "./api-client": "./src/api-client.js",
+    "./styles/tokens.css": {
+      "style": "./styles/tokens.css",
+      "default": "./styles/tokens.css"
+    },
+    "./format": "./src/format.js"
   },
-  "sideEffects": false,
+  "sideEffects": [
+    "*.css"
+  ],
   "scripts": {
     "test": "vitest run"
   },
   "devDependencies": {
     "vitest": "^4.1.12"
-  }
+  },
+  "files": [
+    "src",
+    "styles"
+  ]
 }

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Ghotok Admin</title>
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Manrope:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600&family=Noto+Serif+Bengali:wght@500;600&display=swap"
+    />
+    <script>
+      // Apply the saved language and theme before React renders (no flash).
+      // The cookies are shared with the website, so both remember the same choice.
+      (function () {
+        var c = document.cookie;
+        var lang = /(?:^|; )gh_lang=(bn|en)/.exec(c);
+        var theme = /(?:^|; )gh_theme=(dark|light)/.exec(c);
+        if (lang) document.documentElement.lang = lang[1];
+        if (theme) document.documentElement.dataset.theme = theme[1];
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

@@ -4,7 +4,7 @@ import { useMutation } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Button, FormMessage, TextInput } from '@/components/ui';
+import { Button, FormMessage, TextInput } from '@ghotok/ui';
 import { useSetAuthUser } from '@/hooks/use-auth';
 import { useErrorMessage } from '@/hooks/use-error-message';
 import { authApi } from '@/lib/api/endpoints';

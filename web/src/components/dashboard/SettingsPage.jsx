@@ -4,13 +4,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { DELETE_REASONS, RESTORE_STATUS, optionLabel } from '@ghotok/shared';
-import { Button, Card, FormMessage, Modal, SelectInput, TextArea, TextInput } from '@/components/ui';
+import { Button, Card, FormMessage, Modal, SelectInput, TextArea, TextInput } from '@ghotok/ui';
 import { AUTH_KEY, useAuth } from '@/hooks/use-auth';
 import { useErrorMessage } from '@/hooks/use-error-message';
 import { accountApi, biodataApi } from '@/lib/api/endpoints';
 import { validate } from '@/lib/validators';
 import { usePreferences } from '@/providers/PreferencesProvider';
-import { useToast } from '@/providers/ToastProvider';
+import { useToast } from '@ghotok/ui';
 import { PageTitle } from './DashboardShell.jsx';
 import { MY_BIODATA_KEY } from './biodata-editor/keys.js';
 

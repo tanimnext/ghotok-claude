@@ -3,13 +3,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { REPORT_REASONS } from '@ghotok/shared';
-import { Button, FormMessage, Icon, Modal, SelectInput, TextArea } from '@/components/ui';
+import { Button, FormMessage, Icon, Modal, SelectInput, TextArea } from '@ghotok/ui';
 import { useAuth } from '@/hooks/use-auth';
 import { useErrorMessage } from '@/hooks/use-error-message';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import { biodataApi } from '@/lib/api/endpoints';
 import { useT } from '@/providers/PreferencesProvider';
-import { useToast } from '@/providers/ToastProvider';
+import { useToast } from '@ghotok/ui';
 
 /** The signed-in member's relationship to a biodata (favorite, unlocked, proposal…). */
 export function useViewerState(biodataNo) {

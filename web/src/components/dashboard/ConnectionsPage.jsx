@@ -14,12 +14,12 @@ import {
   Pill,
   STATUS_TONE,
   TextArea,
-} from '@/components/ui';
+} from '@ghotok/ui';
 import { useErrorMessage } from '@/hooks/use-error-message';
 import { accountApi, billingApi } from '@/lib/api/endpoints';
 import { date, digits, number, taka } from '@/lib/format';
 import { useT } from '@/providers/PreferencesProvider';
-import { useToast } from '@/providers/ToastProvider';
+import { useToast } from '@ghotok/ui';
 import { PageTitle } from './DashboardShell.jsx';
 
 const th =

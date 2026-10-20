@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui';
+import { Button } from '@ghotok/ui';
 import { getTranslator } from '@/lib/preferences.server';
 
 export async function NotFoundContent() {

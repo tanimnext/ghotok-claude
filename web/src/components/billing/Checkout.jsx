@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState } from 'react';
 import { isValidPhone } from '@ghotok/shared';
-import { Button, Card, FormMessage, Icon, TextInput } from '@/components/ui';
+import { Button, Card, FormMessage, Icon, TextInput } from '@ghotok/ui';
 import { AUTH_KEY, useAuth } from '@/hooks/use-auth';
 import { useErrorMessage } from '@/hooks/use-error-message';
 import { billingApi } from '@/lib/api/endpoints';

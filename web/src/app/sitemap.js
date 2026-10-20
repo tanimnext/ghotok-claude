@@ -18,7 +18,7 @@ const STATIC = [
 export const revalidate = 3600;
 
 export default async function sitemap() {
-  const { items } = await getPublicOr({ items: [] }, '/biodatas?limit=48&sort=newest');
+  const { items } = await getPublicOr({ items: [] }, '/biodatas?limit=48&sort=newest', { revalidate });
   return [
     ...STATIC.map((path) => ({
       url: `${SITE_URL}${path}`,

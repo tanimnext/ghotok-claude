@@ -3,13 +3,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { VALIDATION_MESSAGES, isFieldVisible, validateSection } from '@ghotok/shared';
-import { Button, Card, FormMessage } from '@/components/ui';
+import { BiodataField, Button, Card, FormMessage } from '@ghotok/ui';
 import { useErrorMessage } from '@/hooks/use-error-message';
 import { biodataApi } from '@/lib/api/endpoints';
 import { useT } from '@/providers/PreferencesProvider';
-import { useToast } from '@/providers/ToastProvider';
+import { useToast } from '@ghotok/ui';
 import { MY_BIODATA_KEY } from './keys.js';
-import { FieldControl } from './FieldControl.jsx';
 
 const initialValues = (section, saved) => {
   const values = { ...(saved ?? {}) };
@@ -32,6 +31,11 @@ export function SectionForm({ section, sections, onSaved, isLast }) {
   const [action, setAction] = useState(null); // which button is saving: 'save' | 'next'
 
   const all = { ...sections, [section.key]: values };
+  const fieldText = {
+    choose: t('editor.choose'),
+    selectMany: t('editor.selectMany'),
+    privateNote: t('editor.privateNote'),
+  };
   const message = (code) => VALIDATION_MESSAGES[code]?.[lang] ?? code;
 
   const save = useMutation({
@@ -74,9 +78,11 @@ export function SectionForm({ section, sections, onSaved, isLast }) {
         {section.fields
           .filter((f) => isFieldVisible(f, all))
           .map((f) => (
-            <FieldControl
+            <BiodataField
               key={f.key}
               field={f}
+              lang={lang}
+              text={fieldText}
               value={values[f.key]}
               values={values}
               error={errors[f.key] && message(errors[f.key])}

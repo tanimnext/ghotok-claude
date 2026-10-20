@@ -3,12 +3,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { BIODATA_SECTIONS, BIODATA_STATUS, optionLabel } from '@ghotok/shared';
-import { Button, FormMessage, Icon, LoadingBlock, Pill, STATUS_TONE } from '@/components/ui';
+import { Button, FormMessage, Icon, LoadingBlock, Pill, STATUS_TONE } from '@ghotok/ui';
 import { useErrorMessage } from '@/hooks/use-error-message';
 import { biodataApi } from '@/lib/api/endpoints';
 import { digits } from '@/lib/format';
 import { useT } from '@/providers/PreferencesProvider';
-import { useToast } from '@/providers/ToastProvider';
+import { useToast } from '@ghotok/ui';
 import { PageTitle } from '../DashboardShell.jsx';
 import { MY_BIODATA_KEY } from './keys.js';
 import { NidPanel } from './NidPanel.jsx';

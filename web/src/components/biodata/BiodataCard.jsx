@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Icon, Pill } from '@/components/ui';
+import { Icon, Pill } from '@ghotok/ui';
 import { useT } from '@/providers/PreferencesProvider';
 import { ArchPortrait } from './ArchPortrait.jsx';
 import { cardText } from './biodata-text.js';

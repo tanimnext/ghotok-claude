@@ -9,7 +9,7 @@ const nextConfig = {
   poweredByHeader: false,
   output: 'standalone',
   outputFileTracingRoot: path.join(dirname, '..'),
-  transpilePackages: ['@ghotok/shared'],
+  transpilePackages: ['@ghotok/shared', '@ghotok/ui'],
   // The browser always talks to /api on this origin; Next.js forwards it to the
   // Express API. Auth cookies therefore stay first-party.
   async rewrites() {

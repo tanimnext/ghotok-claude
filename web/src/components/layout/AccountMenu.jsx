@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Button } from '@/components/ui';
+import { Button } from '@ghotok/ui';
 import { useAuth } from '@/hooks/use-auth';
 import { useT } from '@/providers/PreferencesProvider';
 

@@ -3,7 +3,7 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { SORT_OPTIONS } from '@ghotok/shared';
-import { EmptyState, Pagination } from '@/components/ui';
+import { EmptyState, Pagination } from '@ghotok/ui';
 import { useAuth } from '@/hooks/use-auth';
 import { biodataApi } from '@/lib/api/endpoints';
 import { number } from '@/lib/format';

@@ -32,13 +32,18 @@ export default [
     files: ['server/**/*.js', 'shared/**/*.js', '**/*.config.{js,mjs}'],
     languageOptions: { globals: { ...globals.node } },
   },
+  // The shared API client runs in the browser (website and admin panel).
+  {
+    files: ['shared/src/api-client.js'],
+    languageOptions: { globals: { ...globals.browser } },
+  },
   {
     files: ['server/src/scripts/**/*.js'],
     rules: { 'no-console': 'off' },
   },
-  // React code: the Next.js website and the Vite admin panel.
+  // React code: the Next.js website, the Vite admin panel and the shared UI kit.
   {
-    files: ['web/src/**/*.{js,jsx}', 'admin/src/**/*.{js,jsx}'],
+    files: ['web/src/**/*.{js,jsx}', 'admin/src/**/*.{js,jsx}', 'ui/src/**/*.{js,jsx}'],
     plugins: { react, 'react-hooks': reactHooks },
     languageOptions: {
       globals: { ...globals.browser },

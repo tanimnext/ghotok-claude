@@ -4,12 +4,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { BIODATA_STATUS, BIODATA_TYPES, DISTRICTS, PROPOSAL_STATUS, optionLabel } from '@ghotok/shared';
 import { ArchPortrait } from '@/components/biodata/ArchPortrait';
-import { Button, Card, FormMessage, LoadingBlock, Pill, STATUS_TONE, Switch } from '@/components/ui';
+import { Button, Card, FormMessage, LoadingBlock, Pill, STATUS_TONE, Switch } from '@ghotok/ui';
 import { useErrorMessage } from '@/hooks/use-error-message';
 import { accountApi, biodataApi } from '@/lib/api/endpoints';
 import { date, digits, number } from '@/lib/format';
 import { useT } from '@/providers/PreferencesProvider';
-import { useToast } from '@/providers/ToastProvider';
+import { useToast } from '@ghotok/ui';
 import { PageTitle } from './DashboardShell.jsx';
 
 export const DASHBOARD_KEY = ['dashboard'];

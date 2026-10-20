@@ -18,7 +18,7 @@ import {
   SelectInput,
   TextArea,
   TextInput,
-} from '@/components/ui';
+} from '@ghotok/ui';
 import { useErrorMessage } from '@/hooks/use-error-message';
 import { supportApi } from '@/lib/api/endpoints';
 import { date, dateTime } from '@/lib/format';
