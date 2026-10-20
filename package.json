@@ -1,0 +1,30 @@
+{
+  "name": "ghotok",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Ghotok (ঘটক) — a secure, multi-faith matchmaking platform for Bangladesh (MERN stack).",
+  "type": "module",
+  "workspaces": [
+    "shared",
+    "server",
+    "web",
+    "admin"
+  ],
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "scripts": {
+    "dev": "concurrently -n api,web,admin -c magenta,yellow,cyan \"npm run dev -w server\" \"npm run dev -w web\" \"npm run dev -w admin\"",
+    "dev:api": "npm run dev -w server",
+    "dev:web": "npm run dev -w web",
+    "dev:admin": "npm run dev -w admin",
+    "seed": "npm run seed -w server",
+    "seed:demo": "npm run seed:demo -w server",
+    "test": "npm test -w server",
+    "build": "npm run build -w web && npm run build -w admin",
+    "start": "concurrently -n api,web \"npm start -w server\" \"npm start -w web\""
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6"
+  }
+}
