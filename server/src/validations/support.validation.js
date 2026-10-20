@@ -6,16 +6,40 @@ import {
   TICKET_STATUS,
   optionValues,
 } from '@ghotok/shared';
+import { ATTACHMENT_TYPES, FILE_TYPES } from '../integrations/storage/index.js';
 import { CONTACT_MESSAGE_STATUS } from '../models/index.js';
 import { optionalEmail } from './common.validation.js';
+
+const attachments = z.array(z.string().min(10)).max(5, 'Attach at most 5 files.').optional();
 
 export const createTicket = z.object({
   subject: z.string().trim().min(4, 'Please add a short subject.').max(160),
   category: z.enum(optionValues(TICKET_CATEGORIES)).default('other'),
-  message: z.string().trim().min(10, 'Please describe the problem.').max(5000),
+  message: z.string().trim().min(10, 'Please describe the problem.').max(20000),
+  attachments,
 });
 
-export const replyToTicket = z.object({ message: z.string().trim().min(1).max(5000) });
+/** A reply needs text or at least one attachment. */
+const reply = (extra = {}) =>
+  z
+    .object({ message: z.string().trim().max(20000).default(''), attachments, ...extra })
+    .refine((v) => v.message || v.attachments?.length, {
+      message: 'Write a message or attach a file.',
+      path: ['message'],
+    });
+
+export const replyToTicket = reply();
+
+export const attachmentUpload = z
+  .object({
+    contentType: z.enum(ATTACHMENT_TYPES),
+    size: z.number().int().min(1),
+    name: z.string().trim().max(120).optional(),
+  })
+  .refine((v) => v.size <= FILE_TYPES[v.contentType].maxBytes, {
+    message: 'That file is too large. Images up to 5 MB, PDFs 10 MB, videos 25 MB.',
+    path: ['size'],
+  });
 
 export const contactMessage = z.object({
   name: z.string().trim().min(2, 'Please enter your name.').max(80),
@@ -39,10 +63,7 @@ export const ticketsQuery = z.object({
   ...list,
 });
 
-export const staffReply = z.object({
-  message: z.string().trim().min(1).max(5000),
-  close: z.boolean().optional(),
-});
+export const staffReply = reply({ close: z.boolean().optional() });
 
 export const updateTicket = z.object({
   status: z.enum(optionValues(TICKET_STATUS)).optional(),
@@ -68,4 +89,6 @@ export const reportsQuery = z.object({
 export const updateReport = z.object({
   status: z.enum(optionValues(REPORT_STATUS)),
   actionTaken: z.string().trim().max(500).optional(),
+  // Return the reporter's connection (only when they had unlocked the contact).
+  refundConnection: z.boolean().optional(),
 });

@@ -17,6 +17,12 @@ router.post(
   payment.create,
 );
 router.get('/payments/mine', requireAuth, payment.mine);
+router.get(
+  '/payments/status/:invoiceNo',
+  requireAuth,
+  validate({ params: schema.invoiceParams }),
+  payment.status,
+);
 router.get('/payments/:method/callback', payment.gatewayCallback);
 router.post(
   '/refunds',

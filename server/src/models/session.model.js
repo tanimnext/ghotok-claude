@@ -14,6 +14,8 @@ const sessionSchema = new Schema(
     replacedAt: Date,
     userAgent: String,
     ip: String,
+    // false when the member did not tick "Remember me": the cookies then end with the browser session.
+    persistent: { type: Boolean, default: true },
   },
   { timestamps: true },
 );

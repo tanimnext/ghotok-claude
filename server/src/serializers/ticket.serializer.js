@@ -15,6 +15,10 @@ export function toTicketDTO(t, { withMessages = false } = {}) {
     lastMessageAt: t.lastMessageAt,
     closedAt: t.closedAt ?? null,
     messageCount: t.messages?.length ?? 0,
+    // A staff reply the member has not opened yet.
+    hasNewReply: !!t.lastStaffMessageAt && (!t.userReadAt || t.lastStaffMessageAt > t.userReadAt),
+    biodataNo: t.biodata?.biodataNo ?? null,
+    reportId: t.report?._id?.toString() ?? t.report?.toString() ?? null,
     ...(withMessages
       ? {
           messages: (t.messages ?? []).map((m) => ({
@@ -22,6 +26,7 @@ export function toTicketDTO(t, { withMessages = false } = {}) {
             staff: m.staff,
             author: { name: m.staff ? SUPPORT_NAME : (m.author?.name ?? '') },
             body: m.body,
+            attachments: m.attachments ?? [],
             createdAt: m.createdAt,
           })),
         }
@@ -38,6 +43,7 @@ export function toStaffTicketDTO(t, { withMessages = false } = {}) {
       staff: m.staff,
       author: { name: m.author?.name ?? 'Unknown' },
       body: m.body,
+      attachments: m.attachments ?? [],
       createdAt: m.createdAt,
     }));
   }

@@ -16,6 +16,7 @@ import {
   MarriageReport,
   PUBLIC_FILTER,
   Proposal,
+  Report,
   RestoreRequest,
   nextSequence,
 } from '../models/index.js';
@@ -357,10 +358,10 @@ export function assertNotOwn(b, user, message = 'This is your own biodata.') {
 export async function viewerState(user, biodataNo) {
   const b = await findPublic(biodataNo);
   const isOwner = b.user.equals(user._id);
-  const [favorite, dislike, unlock, proposal] = await Promise.all([
+  const [favorite, dislike, unlock, proposal, report] = await Promise.all([
     Favorite.exists({ user: user._id, biodata: b._id }),
     Dislike.exists({ user: user._id, biodata: b._id }),
-    ContactUnlock.exists({ user: user._id, biodata: b._id }),
+    ContactUnlock.findOne({ user: user._id, biodata: b._id }).select('refundedAt').lean(),
     Proposal.findOne({
       $or: [
         { from: user._id, toBiodata: b._id },
@@ -368,6 +369,10 @@ export async function viewerState(user, biodataNo) {
       ],
       status: { $in: ['pending', 'accepted'] },
     }).sort({ createdAt: -1 }),
+    Report.findOne({ reporter: user._id, biodata: b._id })
+      .sort({ createdAt: -1 })
+      .select('status ticket')
+      .lean(),
   ]);
   const unlocked = isOwner || !!unlock;
   const visibility = b.photo?.visibility;
@@ -379,6 +384,9 @@ export async function viewerState(user, biodataNo) {
     isDisliked: !!dislike,
     unlocked,
     contact: unlocked ? toContact(b) : null,
+    // The connection was given back after the member's report was upheld.
+    refunded: !!unlock?.refundedAt,
+    report: report ? { status: report.status, ticketId: report.ticket?.toString() ?? null } : null,
     photoUrl: showPhoto ? photoUrl(b.photo) : null,
     proposal: proposal
       ? {

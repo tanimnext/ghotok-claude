@@ -104,10 +104,12 @@ describe('gateway checkout (bKash, mocked)', () => {
     expect(start.body.redirectURL).toContain('bka.sh');
 
     const cb = await request(app).get('/api/payments/bkash/callback?paymentID=TR0011abc&status=success');
-    expect(cb.status).toBe(302);
-    expect(cb.headers.location).toContain('/dashboard/connections?payment=success');
+    expect(cb.status).toBe(303);
+    expect(cb.headers.location).toContain(
+      `/dashboard/payment/${start.body.payment.invoiceNo}?result=success`,
+    );
     const again = await request(app).get('/api/payments/bkash/callback?paymentID=TR0011abc&status=success');
-    expect(again.headers.location).toContain('payment=success');
+    expect(again.headers.location).toContain('result=success');
 
     expect((await User.findById(user._id)).connectionBalance).toBe(3);
     const p = await Payment.findOne({ 'gateway.paymentId': 'TR0011abc' });
@@ -134,7 +136,7 @@ describe('gateway checkout (bKash, mocked)', () => {
       .post('/api/payments')
       .send({ packageId: pkg._id.toString(), method: 'bkash', mode: 'gateway' });
     const cb = await request(app).get('/api/payments/bkash/callback?paymentID=TR0022xyz&status=success');
-    expect(cb.headers.location).toContain('payment=failed');
+    expect(cb.headers.location).toContain('result=failed');
     expect((await User.findById(user._id)).connectionBalance).toBe(0);
   });
 });

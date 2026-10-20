@@ -20,10 +20,11 @@ export async function updateProfile(req, res) {
 }
 
 export async function changePassword(req, res) {
-  const user = await accountService.changePassword(req.user._id, req.body);
-  // Every other device was signed out; keep this one signed in.
-  setAuthCookies(res, await issueTokens(user, requestContext(req)));
-  res.json({ ok: true });
+  const keep = req.sessionFamily;
+  const { user, signedOut } = await accountService.changePassword(req.user._id, req.body, keep);
+  // An access token from before session ids existed names no device; give this one a fresh session.
+  if (!keep) setAuthCookies(res, await issueTokens(user, requestContext(req)));
+  res.json({ ok: true, signedOut });
 }
 
 export async function deactivate(req, res) {
@@ -76,4 +77,9 @@ export async function markNotificationRead(req, res) {
 
 export async function connections(req, res) {
   res.json(await myConnections(req.user, req.query));
+}
+
+export async function deleteNotification(req, res) {
+  await notificationService.removeNotification(req.user._id, req.params.id);
+  res.json({ ok: true });
 }

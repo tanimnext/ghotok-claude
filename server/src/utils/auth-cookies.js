@@ -20,16 +20,17 @@ function baseOptions() {
   };
 }
 
-export function setAuthCookies(res, { accessToken, refreshToken }) {
+/** Sets the auth cookies. Without `persistent` ("Remember me" off) they end with the browser session. */
+export function setAuthCookies(res, { accessToken, refreshToken, persistent = true }) {
   res.cookie(ACCESS_COOKIE, accessToken, {
     ...baseOptions(),
     path: '/',
     maxAge: env.ACCESS_TOKEN_TTL_MIN * 60e3,
   });
   if (refreshToken) {
-    const maxAge = env.REFRESH_TOKEN_TTL_DAYS * 864e5;
-    res.cookie(REFRESH_COOKIE, refreshToken, { ...baseOptions(), path: REFRESH_PATH, maxAge });
-    res.cookie(SESSION_HINT_COOKIE, '1', { ...baseOptions(), httpOnly: false, path: '/', maxAge });
+    const lifetime = persistent ? { maxAge: env.REFRESH_TOKEN_TTL_DAYS * 864e5 } : {};
+    res.cookie(REFRESH_COOKIE, refreshToken, { ...baseOptions(), path: REFRESH_PATH, ...lifetime });
+    res.cookie(SESSION_HINT_COOKIE, '1', { ...baseOptions(), httpOnly: false, path: '/', ...lifetime });
   }
 }
 

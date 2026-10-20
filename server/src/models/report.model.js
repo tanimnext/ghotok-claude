@@ -15,6 +15,10 @@ const reportSchema = new Schema(
     actionTaken: { type: String, maxlength: 500 },
     handledBy: { type: Schema.Types.ObjectId, ref: 'User' },
     handledAt: Date,
+    // The support conversation about this report.
+    ticket: { type: Schema.Types.ObjectId, ref: 'SupportTicket' },
+    // Whether the reporter got their connection back when the report was upheld.
+    connectionRefunded: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

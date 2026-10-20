@@ -78,6 +78,15 @@ const schema = z.object({
   NAGAD_MERCHANT_NUMBER: z.string().optional(),
   NAGAD_PUBLIC_KEY: z.string().optional(),
   NAGAD_MERCHANT_PRIVATE_KEY: z.string().optional(),
+  // Sign in with Google: create OAuth credentials with the redirect URI
+  // <API_PUBLIC_URL>/api/auth/google/callback. Leave empty to hide the button.
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+
+  SSLCOMMERZ_ENABLED: bool(false),
+  SSLCOMMERZ_BASE_URL: z.string().default('https://sandbox.sslcommerz.com'),
+  SSLCOMMERZ_STORE_ID: z.string().optional(),
+  SSLCOMMERZ_STORE_PASSWORD: z.string().optional(),
 
   // Seed
   SEED_ADMIN_EMAIL: z.string().default('admin@ghotok.com.bd'),

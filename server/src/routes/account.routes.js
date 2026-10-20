@@ -31,5 +31,6 @@ router.post('/proposals/:id/withdraw', validate({ params: idParams }), account.w
 router.get('/notifications', account.notifications);
 router.post('/notifications/read-all', account.markAllNotificationsRead);
 router.post('/notifications/:id/read', validate({ params: idParams }), account.markNotificationRead);
+router.delete('/notifications/:id', validate({ params: idParams }), account.deleteNotification);
 
 export default router;

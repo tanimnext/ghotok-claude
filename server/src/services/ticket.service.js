@@ -3,24 +3,31 @@ import { toStaffTicketDTO, toTicketDTO } from '../serializers/ticket.serializer.
 import { conflict, notFound } from '../utils/api-error.js';
 import { pageParams, paginate } from '../utils/pagination.js';
 import { escapeRegex } from '../utils/strings.js';
+import { resolveAttachments, withAttachmentUrls } from './attachment.service.js';
 import { notify } from './notification.service.js';
 
 const MAX_OPEN_TICKETS = 5;
+
+export { createAttachmentUpload } from './attachment.service.js';
 
 // ----- Members -----------------------------------------------------------------
 
 export function listMyTickets(user, query) {
   const filter = { user: user._id };
   return paginate(
-    SupportTicket.find(filter).sort({ lastMessageAt: -1 }),
+    SupportTicket.find(filter).sort({ lastMessageAt: -1 }).populate('biodata', 'biodataNo'),
     SupportTicket.countDocuments(filter),
     pageParams(query, { defaultLimit: 20 }),
     (t) => toTicketDTO(t),
   );
 }
 
-export async function openTicket(user, { subject, category, message }) {
-  const open = await SupportTicket.countDocuments({ user: user._id, status: { $ne: 'closed' } });
+/**
+ * Opens a ticket. Reports about a biodata open one too (see report.service.js),
+ * passing `extra` ({ report, biodata }) and skipping the open-ticket limit.
+ */
+export async function openTicket(user, { subject, category, message, attachments }, extra) {
+  const open = extra ? 0 : await SupportTicket.countDocuments({ user: user._id, status: { $ne: 'closed' } });
   if (open >= MAX_OPEN_TICKETS) {
     throw conflict(
       'TOO_MANY_OPEN',
@@ -32,30 +39,51 @@ export async function openTicket(user, { subject, category, message }) {
     user: user._id,
     subject,
     category,
-    messages: [{ author: user._id, staff: false, body: message }],
+    messages: [
+      {
+        author: user._id,
+        staff: false,
+        body: message,
+        attachments: await resolveAttachments(user._id, attachments),
+      },
+    ],
+    ...extra,
   });
   return toTicketDTO(ticket);
 }
 
 async function findMyTicket(user, id) {
-  const t = await SupportTicket.findOne({ _id: id, user: user._id }).populate('messages.author', 'name');
+  const t = await SupportTicket.findOne({ _id: id, user: user._id })
+    .populate('messages.author', 'name')
+    .populate('biodata', 'biodataNo');
   if (!t) throw notFound('Ticket');
   return t;
 }
 
+/** The member's ticket with its messages; opening it marks staff replies as read. */
 export async function getMyTicket(user, id) {
-  return toTicketDTO(await findMyTicket(user, id), { withMessages: true });
+  const t = await findMyTicket(user, id);
+  t.userReadAt = new Date();
+  await t.save();
+  return withAttachmentUrls(toTicketDTO(t, { withMessages: true }));
 }
 
-export async function replyToMyTicket(user, id, message) {
+/** The member replies. Replying to a closed ticket reopens it and sends it back to support. */
+export async function replyToMyTicket(user, id, { message = '', attachments }) {
   const t = await findMyTicket(user, id);
-  if (t.status === 'closed') throw conflict('TICKET_CLOSED', 'This ticket is closed. Please open a new one.');
-  t.messages.push({ author: user._id, staff: false, body: message });
+  t.messages.push({
+    author: user._id,
+    staff: false,
+    body: message,
+    attachments: await resolveAttachments(user._id, attachments),
+  });
   t.status = 'waiting';
+  t.closedAt = undefined;
   t.lastMessageAt = new Date();
+  t.userReadAt = t.lastMessageAt;
   await t.save();
   await t.populate('messages.author', 'name');
-  return toTicketDTO(t, { withMessages: true });
+  return withAttachmentUrls(toTicketDTO(t, { withMessages: true }));
 }
 
 export async function closeMyTicket(user, id) {
@@ -99,6 +127,7 @@ export async function listTickets({ status, category, q }, query) {
 
 async function findTicket(id) {
   const t = await SupportTicket.findById(id)
+    .populate('biodata', 'biodataNo')
     .populate('user', 'name email phone role status')
     .populate('messages.author', 'name')
     .populate('assignedTo', 'name');
@@ -107,17 +136,23 @@ async function findTicket(id) {
 }
 
 export async function getTicket(id) {
-  return toStaffTicketDTO(await findTicket(id), { withMessages: true });
+  return withAttachmentUrls(toStaffTicketDTO(await findTicket(id), { withMessages: true }));
 }
 
 /** Staff reply; optionally closes the ticket. The member is notified. */
-export async function staffReply(id, { message, close }, ctx) {
+export async function staffReply(id, { message = '', close, attachments }, ctx) {
   const t = await findTicket(id);
   if (t.status === 'closed') throw conflict('TICKET_CLOSED', 'This ticket is closed.');
-  t.messages.push({ author: ctx.actor._id, staff: true, body: message });
+  t.messages.push({
+    author: ctx.actor._id,
+    staff: true,
+    body: message,
+    attachments: await resolveAttachments(ctx.actor._id, attachments),
+  });
   t.status = close ? 'closed' : 'answered';
   if (close) t.closedAt = new Date();
   t.lastMessageAt = new Date();
+  t.lastStaffMessageAt = t.lastMessageAt;
   t.assignedTo ??= ctx.actor._id;
   await t.save();
   await t.populate([
@@ -125,7 +160,7 @@ export async function staffReply(id, { message, close }, ctx) {
     { path: 'assignedTo', select: 'name' },
   ]);
   await notify(t.user._id, 'ticket_replied', { ticketNo: t.ticketNo }, `/dashboard/support/${t._id}`);
-  return toStaffTicketDTO(t, { withMessages: true });
+  return withAttachmentUrls(toStaffTicketDTO(t, { withMessages: true }));
 }
 
 export async function updateTicket(id, { status, priority, assignToMe }, ctx) {
@@ -138,7 +173,7 @@ export async function updateTicket(id, { status, priority, assignToMe }, ctx) {
   if (assignToMe) t.assignedTo = ctx.actor._id;
   await t.save();
   await t.populate('assignedTo', 'name');
-  return toStaffTicketDTO(t, { withMessages: true });
+  return withAttachmentUrls(toStaffTicketDTO(t, { withMessages: true }));
 }
 
 export function listContactMessages({ status }, query) {

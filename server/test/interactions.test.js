@@ -118,15 +118,20 @@ describe('favorites, dislikes, proposals, reports and support', () => {
     expect(reply.status).toBe(200);
     expect(reply.body.ticket.status).toBe('answered');
 
+    const listed = await agent.get('/api/tickets');
+    expect(listed.body.items[0].hasNewReply).toBe(true);
     const thread = await agent.get(`/api/tickets/${id}`);
     expect(thread.body.ticket.messages).toHaveLength(2);
+    expect((await agent.get('/api/tickets')).body.items[0].hasNewReply).toBe(false);
     expect(thread.body.ticket.messages[1]).toMatchObject({ staff: true, author: { name: 'Ghotok support' } });
     const follow = await agent.post(`/api/tickets/${id}/messages`).send({ message: 'That worked, thanks!' });
     expect(follow.body.ticket.status).toBe('waiting');
     await agent.post(`/api/tickets/${id}/close`);
-    expect((await agent.post(`/api/tickets/${id}/messages`).send({ message: 'One more thing' })).status).toBe(
-      409,
-    );
+    // Writing to a closed ticket reopens it for support.
+    const reopened = await agent.post(`/api/tickets/${id}/messages`).send({ message: 'One more thing' });
+    expect(reopened.status).toBe(200);
+    expect(reopened.body.ticket.status).toBe('waiting');
+    expect((await agent.post(`/api/tickets/${id}/messages`).send({ message: '' })).status).toBe(400);
 
     const contact = await request(app)
       .post('/api/contact')

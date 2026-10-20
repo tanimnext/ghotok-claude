@@ -43,14 +43,12 @@ describe('review corrections and the approval gift', () => {
     expect(blocked.body.error.details.fields).toHaveLength(2);
 
     const sections = demoSections(PEOPLE[6], 6);
-    await agent
-      .put('/api/biodatas/me/sections/personal')
-      .send({
-        data: {
-          ...sections.personal,
-          aboutMe: `${sections.personal.aboutMe} I also enjoy gardening with my family.`,
-        },
-      });
+    await agent.put('/api/biodatas/me/sections/personal').send({
+      data: {
+        ...sections.personal,
+        aboutMe: `${sections.personal.aboutMe} I also enjoy gardening with my family.`,
+      },
+    });
     await agent
       .put('/api/biodatas/me/sections/education')
       .send({ data: { ...sections.education, institution: 'University of Dhaka' } });

@@ -202,6 +202,8 @@ export const PAYMENT_METHODS = [
   { value: 'bkash', en: 'bKash', bn: 'বিকাশ' },
   { value: 'nagad', en: 'Nagad', bn: 'নগদ' },
   { value: 'rocket', en: 'Rocket', bn: 'রকেট' },
+  // Online checkout only: cards, mobile banking and internet banking through SSLCommerz.
+  { value: 'sslcommerz', en: 'Card / mobile banking', bn: 'কার্ড / মোবাইল ব্যাংকিং', gatewayOnly: true },
 ];
 
 export const PAYMENT_STATUS = [

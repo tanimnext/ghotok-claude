@@ -2,7 +2,7 @@ import { PAYMENT_METHODS } from '@ghotok/shared';
 import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
 import { gatewayFor, gateways } from '../integrations/payments/index.js';
-import { Package, Payment, RefundRequest, nextSequence } from '../models/index.js';
+import { Biodata, Package, Payment, RefundRequest, nextSequence } from '../models/index.js';
 import { toPackageDTO, toPaymentDTO } from '../serializers/payment.serializer.js';
 import { toUserSummary } from '../serializers/user.serializer.js';
 import { ApiError, badRequest, conflict, notFound } from '../utils/api-error.js';
@@ -24,21 +24,47 @@ export async function paymentMethods() {
   const settings = await getSetting('payments');
   return {
     verificationHours: settings.verificationHours,
-    methods: PAYMENT_METHODS.map((m) => ({
-      value: m.value,
-      en: m.en,
-      bn: m.bn,
-      enabled: settings[m.value]?.enabled !== false,
-      manualNumber: settings[m.value]?.manualNumber || null,
-      accountType: settings[m.value]?.accountType ?? 'personal',
-      gateway: !!gateways[m.value]?.enabled,
-    })),
+    methods: PAYMENT_METHODS.map((m) => {
+      const gateway = !!gateways[m.value]?.enabled;
+      return {
+        value: m.value,
+        en: m.en,
+        bn: m.bn,
+        // A gateway-only method (SSLCommerz) is offered only when its gateway is configured.
+        enabled: settings[m.value]?.enabled !== false && (!m.gatewayOnly || gateway),
+        gatewayOnly: !!m.gatewayOnly,
+        manualNumber: m.gatewayOnly ? null : settings[m.value]?.manualNumber || null,
+        accountType: settings[m.value]?.accountType ?? 'personal',
+        gateway,
+      };
+    }),
   };
 }
 
-export async function catalogue() {
-  const packages = await Package.find({ isActive: true }).sort({ sortOrder: 1, price: 1 });
-  return { packages: packages.map(toPackageDTO), ...(await paymentMethods()) };
+/** The member's package discount in percent: members whose biodata is live may get one (site setting). */
+export async function discountFor(user) {
+  if (!user) return 0;
+  const { approvedDiscountPercent = 0 } = await getSetting('payments');
+  if (approvedDiscountPercent <= 0) return 0;
+  const approved = await Biodata.exists({ user: user._id, status: 'approved', deletedAt: null });
+  return approved ? Math.min(90, approvedDiscountPercent) : 0;
+}
+
+const discounted = (price, percent) => Math.round(price * (1 - percent / 100));
+
+/** Active packages and payment methods; for a member with a discount, the price they pay. */
+export async function catalogue(user) {
+  const [packages, discount] = await Promise.all([
+    Package.find({ isActive: true }).sort({ sortOrder: 1, price: 1 }),
+    discountFor(user),
+  ]);
+  return {
+    packages: packages.map((p) => ({
+      ...toPackageDTO(p),
+      ...(discount ? { discountPercent: discount, finalPrice: discounted(p.price, discount) } : {}),
+    })),
+    ...(await paymentMethods()),
+  };
 }
 
 async function nextInvoiceNo() {
@@ -55,24 +81,26 @@ export async function createPayment(user, { packageId, method, mode, senderNumbe
   const pkg = await Package.findOne({ _id: packageId, isActive: true });
   if (!pkg) throw notFound('Package');
   const { methods } = await paymentMethods();
-  if (!methods.find((m) => m.value === method)?.enabled) {
+  const chosen = methods.find((m) => m.value === method);
+  if (!chosen?.enabled || (chosen.gatewayOnly && mode !== 'gateway')) {
     throw badRequest('METHOD_DISABLED', 'This payment method is not available right now.');
   }
+  const discount = await discountFor(user);
   const base = {
     user: user._id,
     package: pkg._id,
     packageName: pkg.name,
     connections: pkg.connections,
-    amount: pkg.price,
+    amount: discounted(pkg.price, discount),
     method,
     invoiceNo: await nextInvoiceNo(),
   };
   return mode === 'gateway'
-    ? startGatewayCheckout(base, { ip })
+    ? startGatewayCheckout(base, { ip, user })
     : submitManualPayment(user, base, { senderNumber, trxId });
 }
 
-async function startGatewayCheckout(base, { ip }) {
+async function startGatewayCheckout(base, { ip, user }) {
   const gateway = gatewayFor(base.method);
   if (!gateway) {
     throw badRequest(
@@ -84,6 +112,10 @@ async function startGatewayCheckout(base, { ip }) {
   try {
     const started = await gateway.startCheckout(payment, {
       callbackURL: `${env.API_PUBLIC_URL}/api/payments/${base.method}/callback`,
+      // Gateways that post the result back (SSLCommerz) use these instead.
+      returnURL: `${env.API_PUBLIC_URL}/api/gateway/${base.method}/return`,
+      ipnURL: `${env.API_PUBLIC_URL}/api/gateway/${base.method}/ipn`,
+      customer: { name: user.name, email: user.email, phone: user.phone },
       ip,
     });
     payment.gateway = { paymentId: started.paymentId, response: started.raw };
@@ -151,6 +183,13 @@ export async function completeGatewayCheckout(method, query) {
     { status, 'gateway.response': result.raw },
   );
   return { status, invoiceNo: payment.invoiceNo };
+}
+
+/** One of the member's payments by invoice number, for the receipt page. */
+export async function paymentStatus(user, invoiceNo) {
+  const payment = await Payment.findOne({ user: user._id, invoiceNo });
+  if (!payment) throw notFound('Payment');
+  return toPaymentDTO(payment);
 }
 
 /** A member's payments, each with its latest refund request. */

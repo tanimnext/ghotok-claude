@@ -26,6 +26,8 @@ export const NOTIFICATION_TYPES = Object.freeze([
   'contact_unlocked',
   'report_closed',
   'password_reset_by_staff',
+  'connections_gift',
+  'edit_suspended',
 ]);
 
 /** Creates an in-app notification. Never throws. */
@@ -59,4 +61,8 @@ export async function markAllRead(userId) {
 
 export async function markRead(userId, id) {
   await Notification.updateOne({ _id: id, user: userId }, { readAt: new Date() });
+}
+
+export async function removeNotification(userId, id) {
+  await Notification.deleteOne({ _id: id, user: userId });
 }

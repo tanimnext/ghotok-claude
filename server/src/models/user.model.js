@@ -24,6 +24,8 @@ const userSchema = new Schema(
     connectionsUsed: { type: Number, default: 0 },
     language: { type: String, enum: ['en', 'bn'], default: 'en' },
     lastLoginAt: Date,
+    // Linked Google account (sign in with Google).
+    googleId: { type: String, index: { unique: true, sparse: true } },
     deactivatedAt: Date,
   },
   { timestamps: true },

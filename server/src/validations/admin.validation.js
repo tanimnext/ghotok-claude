@@ -146,3 +146,45 @@ export const auditQuery = z.object({
   targetId: z.string().trim().max(60).optional(),
   ...list,
 });
+
+// ----- Success stories and banners ------------------------------------------------
+
+export const storiesQuery = z.object({ status: loose(z.enum(['pending', 'published', 'hidden'])), ...list });
+
+export const updateStory = z.object({
+  storyStatus: z.enum(['pending', 'published', 'hidden']).optional(),
+  publishedStory: z.string().trim().max(2000).optional(),
+});
+
+const MB = 1024 * 1024;
+export const bannerUpload = z
+  .object({
+    kind: z.enum(['preview', 'file']),
+    contentType: z.enum(['image/jpeg', 'image/png', 'image/webp', 'application/pdf']),
+    size: z
+      .number()
+      .int()
+      .min(1)
+      .max(10 * MB),
+  })
+  .refine((v) => (v.kind === 'file') === (v.contentType === 'application/pdf'), {
+    message: 'Upload the design as a PDF and the preview as an image.',
+    path: ['contentType'],
+  })
+  .refine((v) => v.kind === 'file' || v.size <= 5 * MB, {
+    message: 'The preview image can be at most 5 MB.',
+    path: ['size'],
+  });
+
+const bannerFields = {
+  title: z.object({ en: z.string().trim().min(1).max(120), bn: z.string().trim().max(120).optional() }),
+  fileName: z.string().trim().max(120).optional(),
+  sortOrder: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+};
+export const createBanner = z.object({
+  ...bannerFields,
+  previewTicket: z.string().min(10),
+  fileTicket: z.string().min(10),
+});
+export const updateBanner = z.object(bannerFields).partial();

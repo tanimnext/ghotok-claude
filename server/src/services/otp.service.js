@@ -19,6 +19,11 @@ const MESSAGES = {
     text: (code) =>
       `Ghotok: your verification code is ${code}. It expires in ${TTL_MIN} minutes. / ঘটক যাচাই কোড: ${code}`,
   },
+  login: {
+    subject: 'Your Ghotok sign-in code',
+    text: (code) =>
+      `Ghotok: your sign-in code is ${code}. It expires in ${TTL_MIN} minutes. Never share it. / ঘটক লগইন কোড: ${code}`,
+  },
   reset: {
     subject: 'Reset your Ghotok password',
     text: (code) =>

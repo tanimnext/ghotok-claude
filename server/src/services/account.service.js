@@ -1,7 +1,7 @@
 import { Biodata, Proposal, User } from '../models/index.js';
 import { ApiError } from '../utils/api-error.js';
 import { hashPassword, verifyPassword } from '../utils/crypto.js';
-import { revokeAllSessions } from './token.service.js';
+import { revokeAllSessions, revokeOtherSessions } from './token.service.js';
 
 // A member managing their own account.
 
@@ -23,12 +23,17 @@ export async function updateProfile(user, { name, language }) {
 }
 
 /** Changes the password and signs out every device (the caller signs the current one back in). */
-export async function changePassword(userId, { currentPassword, newPassword }) {
+/**
+ * Changes the password and signs out every other device (this one, identified by
+ * `keepFamily`, stays signed in).
+ * @returns {Promise<{ user: object, signedOut: number }>}
+ */
+export async function changePassword(userId, { currentPassword, newPassword }, keepFamily) {
   const user = await assertPassword(userId, currentPassword, 'currentPassword');
   user.passwordHash = await hashPassword(newPassword);
   await user.save();
-  await revokeAllSessions(user._id);
-  return user;
+  const signedOut = await revokeOtherSessions(user._id, keepFamily);
+  return { user, signedOut };
 }
 
 /** Deactivates the account: hides the biodata, withdraws proposals and signs out everywhere. */

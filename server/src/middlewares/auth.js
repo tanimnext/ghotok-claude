@@ -15,6 +15,8 @@ export async function loadUser(req, _res, next) {
   try {
     const payload = verifyAccessToken(token);
     req.user = (await User.findById(payload.sub)) ?? undefined;
+    // The session family ("this device"); the refresh cookie itself only reaches /api/auth.
+    req.sessionFamily = payload.sid;
   } catch (err) {
     req.authError = err.name === 'TokenExpiredError' ? 'TOKEN_EXPIRED' : 'TOKEN_INVALID';
   }

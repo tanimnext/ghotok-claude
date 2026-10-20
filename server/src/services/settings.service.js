@@ -14,6 +14,10 @@ export const DEFAULT_SETTINGS = {
     youtube: '',
     instagram: '',
     whatsapp: '',
+    // Link to the Android app, shown in the footer and the dashboard when set.
+    appUrl: '',
+    // YouTube links of short how-to videos, shown next to the matching steps.
+    tutorials: { createBiodata: '', buyConnections: '', viewContact: '' },
   },
   payments: {
     verificationHours: 6,

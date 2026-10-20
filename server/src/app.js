@@ -8,6 +8,7 @@ import { logger } from './config/logger.js';
 import { loadUser } from './middlewares/auth.js';
 import { errorHandler, notFoundHandler } from './middlewares/error.js';
 import { apiLimiter, originCheck, sanitizeBody } from './middlewares/security.js';
+import gatewayRoutes from './routes/gateway.routes.js';
 import api from './routes/index.js';
 import uploadRoutes from './routes/upload.routes.js';
 
@@ -31,6 +32,8 @@ export function createApp() {
 
   // Uploads take raw bodies, so they are mounted before the JSON parser.
   app.use('/api/uploads', uploadRoutes);
+  // Payment gateways post form data from their own domain (see gateway.routes.js).
+  app.use('/api/gateway', apiLimiter, gatewayRoutes);
 
   app.use(express.json({ limit: '200kb' }));
   app.use(sanitizeBody);

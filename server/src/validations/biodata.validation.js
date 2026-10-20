@@ -98,6 +98,7 @@ export const proposal = z.object({ message: z.string().trim().max(1000).optional
 export const report = z.object({
   reason: z.enum(optionValues(REPORT_REASONS)),
   details: z.string().trim().max(2000).optional(),
+  attachments: z.array(z.string().min(10)).max(5).optional(),
 });
 
 const text = z.string().trim().max(200).optional();

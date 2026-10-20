@@ -29,8 +29,13 @@ describe('connections and payments', () => {
       [3, 300],
       [5, 500],
     ]);
-    expect(res.body.methods.map((m) => m.value)).toEqual(['bkash', 'nagad', 'rocket']);
+    expect(res.body.methods.map((m) => m.value)).toEqual(['bkash', 'nagad', 'rocket', 'sslcommerz']);
     expect(res.body.methods.every((m) => m.gateway === false)).toBe(true);
+    // Card / mobile banking needs SSLCommerz keys, so it is off here.
+    expect(res.body.methods.find((m) => m.value === 'sslcommerz')).toMatchObject({
+      enabled: false,
+      gatewayOnly: true,
+    });
   });
 
   it('refuses to unlock a contact without a balance', async () => {

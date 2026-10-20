@@ -1,4 +1,6 @@
 import { Biodata, Faq, PUBLIC_FILTER, Page } from '../models/index.js';
+import { google } from '../integrations/oauth/google.js';
+import { gateways } from '../integrations/payments/index.js';
 import { notFound } from '../utils/api-error.js';
 import { recordAudit } from './audit.service.js';
 import { getAllSettings, getSetting, setSetting } from './settings.service.js';
@@ -35,7 +37,16 @@ export function clearStatsCache() {
 /** Settings that are safe to show to anyone. */
 export async function publicSettings() {
   const [site, payments] = await Promise.all([getSetting('site'), getSetting('payments')]);
-  return { site, payments: { verificationHours: payments.verificationHours } };
+  return {
+    site,
+    payments: {
+      verificationHours: payments.verificationHours,
+      approvalGift: payments.approvalGift,
+      approvedDiscountPercent: payments.approvedDiscountPercent,
+      gateways: Object.keys(gateways).filter((m) => gateways[m].enabled),
+    },
+    auth: { google: google.enabled },
+  };
 }
 
 export async function publishedPage(slug) {

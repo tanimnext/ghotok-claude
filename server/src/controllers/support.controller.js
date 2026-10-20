@@ -13,7 +13,11 @@ export async function get(req, res) {
 }
 
 export async function reply(req, res) {
-  res.json({ ticket: await ticketService.replyToMyTicket(req.user, req.params.id, req.body.message) });
+  res.json({ ticket: await ticketService.replyToMyTicket(req.user, req.params.id, req.body) });
+}
+
+export async function attachmentUploadUrl(req, res) {
+  res.json(await ticketService.createAttachmentUpload(req.user._id, req.body));
 }
 
 export async function close(req, res) {

@@ -224,6 +224,35 @@ router.put(
   validate({ params: admin.settingsParams, body: admin.updateSettings }),
   content.updateSettings,
 );
+router.get(
+  '/marriage-reports',
+  can('content.manage'),
+  validate({ query: admin.storiesQuery }),
+  content.marriageReports,
+);
+router.patch(
+  '/marriage-reports/:id',
+  can('content.manage'),
+  id,
+  validate({ body: admin.updateStory }),
+  content.updateStory,
+);
+router.get('/banners', can('content.manage'), content.banners);
+router.post(
+  '/banners/upload-url',
+  can('content.manage'),
+  validate({ body: admin.bannerUpload }),
+  content.bannerUploadUrl,
+);
+router.post('/banners', can('content.manage'), validate({ body: admin.createBanner }), content.createBanner);
+router.patch(
+  '/banners/:id',
+  can('content.manage'),
+  id,
+  validate({ body: admin.updateBanner }),
+  content.updateBanner,
+);
+router.delete('/banners/:id', can('content.manage'), id, content.deleteBanner);
 router.get('/pages', can('content.manage'), content.pages);
 router.get('/pages/:slug', can('content.manage'), validate({ params: admin.pageParams }), content.page);
 router.put(

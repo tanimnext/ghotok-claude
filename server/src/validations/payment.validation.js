@@ -110,3 +110,13 @@ const packageFields = {
 
 export const createPackage = z.object(packageFields);
 export const updatePackage = z.object(packageFields).partial();
+
+export const invoiceParams = z.object({
+  invoiceNo: z
+    .string()
+    .trim()
+    .regex(/^INV-[A-Z0-9-]{4,40}$/i),
+});
+
+/** Gateways that post their result back to us (form posts from the customer's browser and IPN). */
+export const postbackParams = z.object({ method: z.enum(['sslcommerz']) });

@@ -82,6 +82,32 @@ const markVerified = (user, field) => {
   else user.phoneVerified = true;
 };
 
+/**
+ * Passwordless sign-in, step 1: sends a one-time code to the account's email or
+ * phone. Answers the same way whether or not the account exists.
+ */
+export async function requestLoginCode({ identifier }) {
+  const user = await findByIdentifier(identifier);
+  if (!user || INACTIVE.includes(user.status)) return {};
+  return { devOtp: await issueOtpIfDue(identifier.value, 'login') };
+}
+
+/** Passwordless sign-in, step 2: the code proves the member owns that email or phone. */
+export async function loginWithCode({ identifier, code }) {
+  const user = await findByIdentifier(identifier);
+  if (!user) throw badRequest('OTP_INVALID', 'The code is invalid or has expired.');
+  await consumeOtp(identifier.value, 'login', code);
+  assertActive(user);
+  markVerified(user, identifier.field);
+  if (user.status === 'deactivated') {
+    user.status = 'active';
+    user.deactivatedAt = undefined;
+  }
+  user.lastLoginAt = new Date();
+  await user.save();
+  return user;
+}
+
 /** Confirms the verification code sent to an email or phone number. */
 export async function verify({ identifier, code }) {
   const user = await findByIdentifier(identifier);
@@ -138,11 +164,34 @@ export async function refresh(rawToken, client) {
   return {
     user,
     tokens: {
-      accessToken: signAccessToken(user),
+      accessToken: signAccessToken(user, rotated.family),
       refreshToken: rotated.token,
+      persistent: rotated.persistent,
       expiresIn: env.ACCESS_TOKEN_TTL_MIN * 60,
     },
   };
 }
 
 export const logout = (rawToken) => revokeSession(rawToken);
+
+/**
+ * Signs in with a verified Google profile: by linked Google account, else by the
+ * same email (linking it), else as a new member with that email verified.
+ */
+export async function loginWithGoogle({ googleId, email, name }) {
+  let user = (await User.findOne({ googleId })) ?? (await User.findOne({ email }));
+  if (!user) {
+    user = await User.create({ name: name.slice(0, 80), email, googleId, emailVerified: true });
+  } else {
+    assertActive(user);
+    user.googleId ??= googleId;
+    if (user.email === email) user.emailVerified = true;
+    if (user.status === 'deactivated') {
+      user.status = 'active';
+      user.deactivatedAt = undefined;
+    }
+  }
+  user.lastLoginAt = new Date();
+  await user.save();
+  return user;
+}
