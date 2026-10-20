@@ -49,7 +49,8 @@ describe('dictionary coverage', () => {
     const lookup = (path) => path.split('.').reduce((n, k) => n?.[k], en);
     for (const file of sourceFiles(join(import.meta.dirname, '../src'))) {
       const code = readFileSync(file, 'utf8');
-      for (const [, key] of code.matchAll(/\bt\(\s*'([\w.]+)'/g)) expect(lookup(key), `${key} in ${file}`).toBeDefined();
+      for (const [, key] of code.matchAll(/\bt\(\s*'([\w.]+)'/g))
+        expect(lookup(key), `${key} in ${file}`).toBeDefined();
       for (const [, prefix] of code.matchAll(/\bt\(\s*`([\w.]+)\.\$\{/g))
         expect(lookup(prefix), `${prefix}.* in ${file}`).toBeTypeOf('object');
     }
