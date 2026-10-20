@@ -1,0 +1,14 @@
+import { Router } from 'express';
+import * as content from '../controllers/content.controller.js';
+import { validate } from '../middlewares/validate.js';
+import { pageParams } from '../validations/admin.validation.js';
+
+// Public site content: /api/public
+const router = Router();
+
+router.get('/stats', content.stats);
+router.get('/settings', content.settings);
+router.get('/pages/:slug', validate({ params: pageParams }), content.page);
+router.get('/faqs', content.faqs);
+
+export default router;

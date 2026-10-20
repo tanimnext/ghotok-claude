@@ -4,19 +4,19 @@ import express from 'express';
 import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
 import { env, isTest } from './config/env.js';
-import { logger } from './lib/logger.js';
-import { loadUser } from './middleware/auth.js';
-import { errorHandler, notFoundHandler } from './middleware/error.js';
-import { apiLimiter, originCheck, sanitizeBody } from './middleware/security.js';
-import adminRoutes from './routes/admin/index.js';
-import authRoutes from './routes/auth.js';
-import billingRoutes from './routes/billing.js';
-import biodataRoutes from './routes/biodatas.js';
-import meRoutes from './routes/me.js';
-import publicRoutes from './routes/public.js';
-import supportRoutes from './routes/support.js';
-import uploadRoutes from './routes/uploads.js';
+import { logger } from './config/logger.js';
+import { loadUser } from './middlewares/auth.js';
+import { errorHandler, notFoundHandler } from './middlewares/error.js';
+import { apiLimiter, originCheck, sanitizeBody } from './middlewares/security.js';
+import api from './routes/index.js';
+import uploadRoutes from './routes/upload.routes.js';
 
+/**
+ * Builds the Express application (without listening), so tests can use it directly.
+ *
+ * Request pipeline: security headers → CORS → logging → cookies → JSON body →
+ * body sanitising → origin check → rate limit → load user → routes → errors.
+ */
 export function createApp() {
   const app = express();
   app.disable('x-powered-by');
@@ -34,15 +34,7 @@ export function createApp() {
 
   app.use(express.json({ limit: '200kb' }));
   app.use(sanitizeBody);
-  app.use('/api', originCheck, apiLimiter, loadUser);
-
-  app.use('/api/auth', authRoutes);
-  app.use('/api/me', meRoutes);
-  app.use('/api/biodatas', biodataRoutes);
-  app.use('/api/public', publicRoutes);
-  app.use('/api/admin', adminRoutes);
-  app.use('/api', billingRoutes);
-  app.use('/api', supportRoutes);
+  app.use('/api', originCheck, apiLimiter, loadUser, api);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

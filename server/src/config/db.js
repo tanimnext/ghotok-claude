@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { env } from './env.js';
-import { logger } from '../lib/logger.js';
+import { logger } from './logger.js';
 
 mongoose.set('strictQuery', true);
 

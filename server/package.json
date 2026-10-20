@@ -4,10 +4,10 @@
   "private": true,
   "description": "Ghotok REST API — Node.js, Express and MongoDB.",
   "type": "module",
-  "main": "src/index.js",
+  "main": "src/server.js",
   "scripts": {
-    "dev": "node --watch --env-file-if-exists=.env src/index.js",
-    "start": "node --env-file-if-exists=.env src/index.js",
+    "dev": "node --watch --env-file-if-exists=.env src/server.js",
+    "start": "node --env-file-if-exists=.env src/server.js",
     "seed": "node --env-file-if-exists=.env src/scripts/seed.js",
     "seed:demo": "node --env-file-if-exists=.env src/scripts/seed.js --demo",
     "test": "vitest run",

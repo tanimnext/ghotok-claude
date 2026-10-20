@@ -11,7 +11,7 @@
     "admin"
   ],
   "engines": {
-    "node": ">=20.9.0"
+    "node": ">=22.12.0"
   },
   "scripts": {
     "dev": "concurrently -n api,web,admin -c magenta,yellow,cyan \"npm run dev -w server\" \"npm run dev -w web\" \"npm run dev -w admin\"",
@@ -20,11 +20,25 @@
     "dev:admin": "npm run dev -w admin",
     "seed": "npm run seed -w server",
     "seed:demo": "npm run seed:demo -w server",
-    "test": "npm test -w server",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "npm test -w shared && npm test -w server",
     "build": "npm run build -w web && npm run build -w admin",
+    "check": "npm run lint && npm run format:check && npm test && npm run build",
     "start": "concurrently -n api,web \"npm start -w server\" \"npm start -w web\""
   },
   "devDependencies": {
-    "concurrently": "^10.0.6"
-  }
+    "@eslint/js": "^9.39.5",
+    "@next/eslint-plugin-next": "^16.4.2",
+    "concurrently": "^10.0.6",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.10"
+  },
+  "license": "UNLICENSED"
 }

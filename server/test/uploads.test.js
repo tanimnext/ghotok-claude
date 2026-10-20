@@ -1,11 +1,14 @@
 import request from 'supertest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { bkash } from '../src/lib/payments/bkash.js';
+import { bkash } from '../src/integrations/payments/bkash.js';
 import { Package, Payment, User } from '../src/models/index.js';
 import { app, approvedBiodata, login, userWithAgent } from './helpers.js';
 
 // Smallest valid PNG (1×1).
-const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
+const PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+  'base64',
+);
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -17,7 +20,10 @@ describe('uploads (local driver)', () => {
     const url = await owner.post('/api/biodatas/me/photo/upload-url');
     expect(url.status).toBe(200);
     expect(url.body.method).toBe('PUT');
-    const notImage = await request(app).put(url.body.uploadURL).set('Content-Type', 'image/png').send(Buffer.from('hello world'));
+    const notImage = await request(app)
+      .put(url.body.uploadURL)
+      .set('Content-Type', 'image/png')
+      .send(Buffer.from('hello world'));
     expect(notImage.status).toBe(400);
     const put = await request(app).put(url.body.uploadURL).set('Content-Type', 'image/png').send(PNG);
     expect(put.status).toBe(200);
@@ -36,7 +42,9 @@ describe('uploads (local driver)', () => {
     // Someone else's ticket cannot be attached.
     const other = await approvedBiodata({ index: 1 });
     const otherAgent = await login(other.user);
-    expect((await otherAgent.post('/api/biodatas/me/photo').send({ ticket: url.body.ticket })).status).toBe(400);
+    expect((await otherAgent.post('/api/biodatas/me/photo').send({ ticket: url.body.ticket })).status).toBe(
+      400,
+    );
 
     // NID front and back.
     const tickets = {};
@@ -46,7 +54,9 @@ describe('uploads (local driver)', () => {
       await request(app).put(u.body.uploadURL).set('Content-Type', 'image/png').send(PNG).expect(200);
       tickets[side] = u.body.ticket;
     }
-    const nid = await owner.post('/api/biodatas/me/nid').send({ frontTicket: tickets.front, backTicket: tickets.back });
+    const nid = await owner
+      .post('/api/biodatas/me/nid')
+      .send({ frontTicket: tickets.front, backTicket: tickets.back });
     expect(nid.status).toBe(200);
     expect(nid.body.biodata.nid.status).toBe('pending');
 
@@ -60,7 +70,10 @@ describe('uploads (local driver)', () => {
   });
 
   it('rejects tampered upload links', async () => {
-    const res = await request(app).put('/api/uploads/local/not-a-token').set('Content-Type', 'image/png').send(PNG);
+    const res = await request(app)
+      .put('/api/uploads/local/not-a-token')
+      .set('Content-Type', 'image/png')
+      .send(PNG);
     expect(res.status).toBe(403);
     expect((await request(app).get('/api/uploads/file/not-a-token')).status).toBe(403);
   });
@@ -69,12 +82,24 @@ describe('uploads (local driver)', () => {
 describe('gateway checkout (bKash, mocked)', () => {
   it('starts checkout, credits on a successful callback and ignores replays', async () => {
     vi.spyOn(bkash, 'enabled', 'get').mockReturnValue(true);
-    vi.spyOn(bkash, 'startCheckout').mockResolvedValue({ paymentId: 'TR0011abc', redirectURL: 'https://sandbox.bka.sh/pay/TR0011abc', raw: {} });
-    vi.spyOn(bkash, 'completeCheckout').mockResolvedValue({ paymentId: 'TR0011abc', success: true, trxId: 'BK7X9Y', amount: 300, raw: {} });
+    vi.spyOn(bkash, 'startCheckout').mockResolvedValue({
+      paymentId: 'TR0011abc',
+      redirectURL: 'https://sandbox.bka.sh/pay/TR0011abc',
+      raw: {},
+    });
+    vi.spyOn(bkash, 'completeCheckout').mockResolvedValue({
+      paymentId: 'TR0011abc',
+      success: true,
+      trxId: 'BK7X9Y',
+      amount: 300,
+      raw: {},
+    });
 
     const pkg = await Package.create({ name: { en: 'Starter' }, connections: 3, price: 300 });
     const { agent, user } = await userWithAgent();
-    const start = await agent.post('/api/payments').send({ packageId: pkg._id.toString(), method: 'bkash', mode: 'gateway' });
+    const start = await agent
+      .post('/api/payments')
+      .send({ packageId: pkg._id.toString(), method: 'bkash', mode: 'gateway' });
     expect(start.status).toBe(201);
     expect(start.body.redirectURL).toContain('bka.sh');
 
@@ -91,11 +116,23 @@ describe('gateway checkout (bKash, mocked)', () => {
 
   it('does not credit when the paid amount does not match', async () => {
     vi.spyOn(bkash, 'enabled', 'get').mockReturnValue(true);
-    vi.spyOn(bkash, 'startCheckout').mockResolvedValue({ paymentId: 'TR0022xyz', redirectURL: 'https://sandbox.bka.sh/pay/x', raw: {} });
-    vi.spyOn(bkash, 'completeCheckout').mockResolvedValue({ paymentId: 'TR0022xyz', success: true, trxId: 'BK1', amount: 1, raw: {} });
+    vi.spyOn(bkash, 'startCheckout').mockResolvedValue({
+      paymentId: 'TR0022xyz',
+      redirectURL: 'https://sandbox.bka.sh/pay/x',
+      raw: {},
+    });
+    vi.spyOn(bkash, 'completeCheckout').mockResolvedValue({
+      paymentId: 'TR0022xyz',
+      success: true,
+      trxId: 'BK1',
+      amount: 1,
+      raw: {},
+    });
     const pkg = await Package.create({ name: { en: 'Standard' }, connections: 5, price: 500 });
     const { agent, user } = await userWithAgent();
-    await agent.post('/api/payments').send({ packageId: pkg._id.toString(), method: 'bkash', mode: 'gateway' });
+    await agent
+      .post('/api/payments')
+      .send({ packageId: pkg._id.toString(), method: 'bkash', mode: 'gateway' });
     const cb = await request(app).get('/api/payments/bkash/callback?paymentID=TR0022xyz&status=success');
     expect(cb.headers.location).toContain('payment=failed');
     expect((await User.findById(user._id)).connectionBalance).toBe(0);

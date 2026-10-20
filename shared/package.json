@@ -8,5 +8,11 @@
   "exports": {
     ".": "./src/index.js"
   },
-  "sideEffects": false
+  "sideEffects": false,
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.12"
+  }
 }

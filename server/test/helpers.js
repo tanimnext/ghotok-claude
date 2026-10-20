@@ -1,15 +1,21 @@
 import request from 'supertest';
 import { createApp } from '../src/app.js';
-import { hashPassword } from '../src/lib/auth.js';
+import { hashPassword } from '../src/utils/crypto.js';
 import { Biodata, User, nextSequence } from '../src/models/index.js';
-import { PEOPLE, demoSections } from '../src/scripts/seed.js';
+import { PEOPLE, demoSections } from '../src/scripts/seed-data/demo-people.js';
 
 export const app = createApp();
 
 let n = 0;
 const uniq = () => `${Date.now().toString(36)}${(n += 1)}`;
 
-export async function createUser({ role = 'user', verified = true, balance = 0, password = 'Password1!', name = 'Test User' } = {}) {
+export async function createUser({
+  role = 'user',
+  verified = true,
+  balance = 0,
+  password = 'Password1!',
+  name = 'Test User',
+} = {}) {
   const id = uniq();
   const user = await User.create({
     name,

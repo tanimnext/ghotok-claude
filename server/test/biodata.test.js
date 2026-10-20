@@ -10,11 +10,15 @@ describe('biodata lifecycle', () => {
     const empty = await agent.get('/api/biodatas/me');
     expect(empty.body.biodata).toBeNull();
 
-    const bad = await agent.put('/api/biodatas/me/sections/contact').send({ data: { guardianPhone: '12345' } });
+    const bad = await agent
+      .put('/api/biodatas/me/sections/contact')
+      .send({ data: { guardianPhone: '12345' } });
     expect(bad.status).toBe(400);
     expect(bad.body.error.details.fields.guardianPhone).toBe('phone');
 
-    const partial = await agent.put('/api/biodatas/me/sections/general').send({ data: { biodataType: 'bride', religion: 'hindu' } });
+    const partial = await agent
+      .put('/api/biodatas/me/sections/general')
+      .send({ data: { biodataType: 'bride', religion: 'hindu' } });
     expect(partial.status).toBe(200);
     expect(partial.body.biodata.biodataNo).toMatch(/^GH-\d+$/);
     expect(partial.body.biodata.status).toBe('draft');
@@ -42,16 +46,19 @@ describe('biodata lifecycle', () => {
 
   it('requires a verified account to create a biodata', async () => {
     const { createUser } = await import('./helpers.js');
-    const { signAccessToken } = await import('../src/lib/auth.js');
+    const { signAccessToken } = await import('../src/services/token.service.js');
     const user = await createUser({ verified: false });
-    const res = await request(app).post('/api/biodatas/me').set('Authorization', `Bearer ${signAccessToken(user)}`);
+    const res = await request(app)
+      .post('/api/biodatas/me')
+      .set('Authorization', `Bearer ${signAccessToken(user)}`);
     expect(res.status).toBe(403);
     expect(res.body.error.code).toBe('NOT_VERIFIED');
   });
 
   it('never exposes private fields publicly and lets reviewers approve', async () => {
     const { agent: owner } = await userWithAgent();
-    for (const [key, data] of Object.entries(demoSections(PEOPLE[1], 1))) await owner.put(`/api/biodatas/me/sections/${key}`).send({ data });
+    for (const [key, data] of Object.entries(demoSections(PEOPLE[1], 1)))
+      await owner.put(`/api/biodatas/me/sections/${key}`).send({ data });
     const { body } = await owner.post('/api/biodatas/me/submit');
     const no = body.biodata.biodataNo;
 
@@ -78,7 +85,8 @@ describe('biodata lifecycle', () => {
 
   it('sends an edited live biodata back to review', async () => {
     const { agent } = await userWithAgent();
-    for (const [key, data] of Object.entries(demoSections(PEOPLE[2], 2))) await agent.put(`/api/biodatas/me/sections/${key}`).send({ data });
+    for (const [key, data] of Object.entries(demoSections(PEOPLE[2], 2)))
+      await agent.put(`/api/biodatas/me/sections/${key}`).send({ data });
     await agent.post('/api/biodatas/me/submit');
     const { user: reviewer } = await userWithAgent({ role: 'super_admin' });
     const { Biodata } = await import('../src/models/index.js');
@@ -87,7 +95,9 @@ describe('biodata lifecycle', () => {
     b.reviewedBy = reviewer._id;
     await b.save();
 
-    const edit = await agent.put('/api/biodatas/me/sections/personal').send({ data: { ...demoSections(PEOPLE[2], 2).personal, hobbies: 'Painting' } });
+    const edit = await agent
+      .put('/api/biodatas/me/sections/personal')
+      .send({ data: { ...demoSections(PEOPLE[2], 2).personal, hobbies: 'Painting' } });
     expect(edit.status).toBe(200);
     expect(edit.body.statusChanged).toBe(true);
     expect(edit.body.biodata.status).toBe('pending');
@@ -96,7 +106,9 @@ describe('biodata lifecycle', () => {
   it('rejects with a reason the owner can read', async () => {
     const { biodata, user } = await approvedBiodata({ index: 3, status: 'pending' });
     const { agent: admin } = await userWithAgent({ role: 'super_admin' });
-    const res = await admin.post(`/api/admin/biodatas/${biodata._id}/reject`).send({ reason: 'Please add your SSC details.' });
+    const res = await admin
+      .post(`/api/admin/biodatas/${biodata._id}/reject`)
+      .send({ reason: 'Please add your SSC details.' });
     expect(res.status).toBe(200);
     const { login } = await import('./helpers.js');
     const owner = await login(user);

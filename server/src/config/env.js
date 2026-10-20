@@ -1,14 +1,23 @@
 import { z } from 'zod';
 
-const bool = (def) => z
-  .enum(['true', 'false', '1', '0', ''])
-  .optional()
-  .transform((v) => (v === undefined || v === '' ? def : v === 'true' || v === '1'));
+const bool = (def) =>
+  z
+    .enum(['true', 'false', '1', '0', ''])
+    .optional()
+    .transform((v) => (v === undefined || v === '' ? def : v === 'true' || v === '1'));
 
-const list = (def) => z
-  .string()
-  .optional()
-  .transform((v) => (v ? v.split(',').map((s) => s.trim()).filter(Boolean) : def));
+const list = (def) =>
+  z
+    .string()
+    .optional()
+    .transform((v) =>
+      v
+        ? v
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : def,
+    );
 
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),

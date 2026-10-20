@@ -50,7 +50,11 @@ export const COMPLEXIONS = [
   { value: 'dark', en: 'Dark', bn: 'কালো' },
 ];
 
-export const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((g) => ({ value: g, en: g, bn: g }));
+export const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((g) => ({
+  value: g,
+  en: g,
+  bn: g,
+}));
 
 export const YES_NO = [
   { value: 'yes', en: 'Yes', bn: 'হ্যাঁ' },
