@@ -200,7 +200,9 @@ with an approved biodata (`approvedDiscountPercent`, default 0 = off).
    (e.g. `https://ghotok.com.bd/api/auth/google/callback`).
 3. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` and restart the API.
 
-The website shows "Continue with Google" only when both are set. A Google account whose verified
+The website shows "Continue with Google" only when both are set. Google sign-in starts on the
+website's `/api` (passed through to the API), so `API_PUBLIC_URL` must be that same website
+address: the short-lived cookie that protects the sign-in only comes back to the host that set it. A Google account whose verified
 email matches an existing account signs in to that account.
 
 ## 7. Email and SMS

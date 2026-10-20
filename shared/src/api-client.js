@@ -21,6 +21,8 @@ export class ApiError extends Error {
 // Endpoints that must never trigger a token refresh (they are the auth flow itself).
 const NO_REFRESH = [
   '/auth/login',
+  '/auth/login/code',
+  '/auth/login/code/verify',
   '/auth/register',
   '/auth/verify',
   '/auth/refresh',

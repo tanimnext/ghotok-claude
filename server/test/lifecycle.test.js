@@ -32,9 +32,22 @@ describe('review corrections and the approval gift', () => {
 
     const mine = await agent.get('/api/biodatas/me');
     expect(mine.body.biodata.status).toBe('rejected');
+    const original = demoSections(PEOPLE[6], 6);
     expect(mine.body.biodata.corrections).toEqual([
-      { section: 'personal', field: 'aboutMe', note: 'Write a little more about yourself.', changed: false },
-      { section: 'education', field: 'institution', note: null, changed: false },
+      {
+        section: 'personal',
+        field: 'aboutMe',
+        note: 'Write a little more about yourself.',
+        previous: original.personal.aboutMe,
+        changed: false,
+      },
+      {
+        section: 'education',
+        field: 'institution',
+        note: null,
+        previous: original.education.institution,
+        changed: false,
+      },
     ]);
 
     const blocked = await agent.post('/api/biodatas/me/submit');

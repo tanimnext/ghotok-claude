@@ -38,6 +38,8 @@ export function correctionsState(b) {
     section: c.section,
     field: c.field,
     note: c.note ?? null,
+    // The answer when staff asked for the change (the owner's own data, so both views may show it).
+    previous: c.previous ?? null,
     changed: !sameValue(sections[c.section]?.[c.field], c.previous),
   }));
 }
