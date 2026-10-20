@@ -5,6 +5,7 @@ const page = (load, name) => lazy(() => load().then((m) => ({ default: m[name] }
 
 const AnalyticsPage = page(() => import('../pages/AnalyticsPage.jsx'), 'AnalyticsPage');
 const AuditLogPage = page(() => import('../pages/AuditLogPage.jsx'), 'AuditLogPage');
+const BannersPage = page(() => import('../pages/BannersPage.jsx'), 'BannersPage');
 const BiodataReviewPage = page(() => import('../pages/BiodataReviewPage.jsx'), 'BiodataReviewPage');
 const BiodatasPage = page(() => import('../pages/BiodatasPage.jsx'), 'BiodatasPage');
 const ConnectionsPage = page(() => import('../pages/ConnectionsPage.jsx'), 'ConnectionsPage');
@@ -17,6 +18,7 @@ const RecoveryPage = page(() => import('../pages/RecoveryPage.jsx'), 'RecoveryPa
 const RefundsPage = page(() => import('../pages/RefundsPage.jsx'), 'RefundsPage');
 const ReportsPage = page(() => import('../pages/ReportsPage.jsx'), 'ReportsPage');
 const SettingsPage = page(() => import('../pages/SettingsPage.jsx'), 'SettingsPage');
+const StoriesPage = page(() => import('../pages/StoriesPage.jsx'), 'StoriesPage');
 const TicketPage = page(() => import('../pages/TicketPage.jsx'), 'TicketPage');
 const TicketsPage = page(() => import('../pages/TicketsPage.jsx'), 'TicketsPage');
 const UserPage = page(() => import('../pages/UserPage.jsx'), 'UserPage');
@@ -114,6 +116,18 @@ export const ROUTES = [
     element: ContentPage,
     permission: 'content.manage',
     nav: { key: 'nav.content', icon: 'file', group: 'site' },
+  },
+  {
+    path: '/stories',
+    element: StoriesPage,
+    permission: 'content.manage',
+    nav: { key: 'nav.stories', icon: 'heart', group: 'site' },
+  },
+  {
+    path: '/banners',
+    element: BannersPage,
+    permission: 'content.manage',
+    nav: { key: 'nav.banners', icon: 'upload', group: 'site' },
   },
   {
     path: '/settings',

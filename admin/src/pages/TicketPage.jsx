@@ -14,6 +14,7 @@ import {
   TextArea,
   useToast,
 } from '@ghotok/ui';
+import { AttachmentList, AttachmentPicker } from '../components/Attachments.jsx';
 import { PageHeader } from '../components/PageHeader.jsx';
 import { UserCell } from '../components/UserCell.jsx';
 import { useErrorMessage } from '../hooks/useErrorMessage.js';
@@ -27,6 +28,7 @@ export function TicketPage() {
   const errorMessage = useErrorMessage();
   const queryClient = useQueryClient();
   const [reply, setReply] = useState('');
+  const [files, setFiles] = useState([]);
   const key = ['ticket', id];
   const query = useQuery({ queryKey: key, queryFn: () => adminApi.ticket(id) });
   const onSaved = (res) => {
@@ -35,9 +37,15 @@ export function TicketPage() {
     queryClient.invalidateQueries({ queryKey: ['overview'] });
   };
   const send = useMutation({
-    mutationFn: (close) => adminApi.replyToTicket(id, { message: reply.trim(), close }),
+    mutationFn: (close) =>
+      adminApi.replyToTicket(id, {
+        message: reply.trim(),
+        attachments: files.length ? files.map((f) => f.ticket) : undefined,
+        close,
+      }),
     onSuccess: (res) => {
       setReply('');
+      setFiles([]);
       onSaved(res);
     },
   });
@@ -51,6 +59,7 @@ export function TicketPage() {
   if (query.error) return <FormMessage>{errorMessage(query.error)}</FormMessage>;
   const ticket = query.data.ticket;
   const closed = ticket.status === 'closed';
+  const canSend = !!reply.trim() || files.length > 0;
 
   return (
     <>
@@ -78,7 +87,8 @@ export function TicketPage() {
                 <b>{m.author.name}</b>
                 <span className="text-muted">{dateTime(m.createdAt, lang)}</span>
               </div>
-              <p className="whitespace-pre-line text-[15px]">{m.body}</p>
+              {m.body && <p className="whitespace-pre-line text-[15px]">{m.body}</p>}
+              <AttachmentList items={m.attachments} />
             </article>
           ))}
 
@@ -109,12 +119,13 @@ export function TicketPage() {
                 rows={5}
                 value={reply}
                 onChange={(e) => setReply(e.target.value)}
-                required
+                maxLength={20000}
               />
+              <AttachmentPicker value={files} onChange={setFiles} disabled={send.isPending} />
               <div className="flex flex-wrap justify-end gap-3">
                 <Button
                   variant="outline"
-                  disabled={!reply.trim()}
+                  disabled={!canSend}
                   loading={send.isPending && send.variables === true}
                   onClick={() => send.mutate(true)}
                 >
@@ -122,7 +133,7 @@ export function TicketPage() {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={!reply.trim()}
+                  disabled={!canSend}
                   loading={send.isPending && send.variables === false}
                 >
                   {t('tickets.reply')}
@@ -135,6 +146,19 @@ export function TicketPage() {
         <aside className="flex flex-col gap-6 xl:sticky xl:top-24">
           <Card title={t('tickets.from')}>
             <UserCell user={ticket.user} />
+            {ticket.biodataNo && (
+              <Link
+                to={`/biodatas?q=${encodeURIComponent(ticket.biodataNo)}&status=all`}
+                className="text-sm font-bold text-rose-text hover:underline"
+              >
+                {t('tickets.aboutBiodata', { no: ticket.biodataNo })}
+              </Link>
+            )}
+            {ticket.reportId && (
+              <Link to="/reports?status=all" className="text-sm font-bold text-rose-text hover:underline">
+                {t('tickets.fromReport')}
+              </Link>
+            )}
           </Card>
           <Card title={t('common.actions')}>
             <SelectInput

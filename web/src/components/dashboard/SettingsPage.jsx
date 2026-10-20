@@ -3,16 +3,26 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { DELETE_REASONS, RESTORE_STATUS, optionLabel } from '@ghotok/shared';
-import { Button, Card, FormMessage, Modal, SelectInput, TextArea, TextInput } from '@ghotok/ui';
+import {
+  Button,
+  Card,
+  ConfirmDialog,
+  FormMessage,
+  LoadingBlock,
+  Modal,
+  Pill,
+  SelectInput,
+  TextInput,
+} from '@ghotok/ui';
 import { AUTH_KEY, useAuth } from '@/hooks/use-auth';
 import { useErrorMessage } from '@/hooks/use-error-message';
-import { accountApi, biodataApi } from '@/lib/api/endpoints';
+import { accountApi, authApi } from '@/lib/api/endpoints';
+import { dateTime, digits } from '@/lib/format';
 import { validate } from '@/lib/validators';
 import { usePreferences } from '@/providers/PreferencesProvider';
 import { useToast } from '@ghotok/ui';
 import { PageTitle } from './DashboardShell.jsx';
-import { MY_BIODATA_KEY } from './biodata-editor/keys.js';
+import { BiodataManagement } from './biodata-lifecycle/BiodataManagement.jsx';
 
 function ProfileCard({ user }) {
   const { t, lang, setLang } = usePreferences();
@@ -64,16 +74,22 @@ function ProfileCard({ user }) {
 }
 
 function PasswordCard() {
-  const { t } = usePreferences();
+  const { t, lang } = usePreferences();
   const toast = useToast();
+  const queryClient = useQueryClient();
   const errorMessage = useErrorMessage();
   const [form, setForm] = useState({ currentPassword: '', newPassword: '' });
   const [errors, setErrors] = useState({});
   const change = useMutation({
     mutationFn: () => accountApi.changePassword(form),
-    onSuccess: () => {
+    onSuccess: ({ signedOut }) => {
       setForm({ currentPassword: '', newPassword: '' });
-      toast.success(t('settings.changed'));
+      toast.success(
+        signedOut
+          ? t('settings.changedSignedOut', { n: digits(signedOut, lang) })
+          : t('settings.changedOnly'),
+      );
+      queryClient.invalidateQueries({ queryKey: SESSIONS_KEY });
     },
   });
   const submit = (e) => {
@@ -110,129 +126,108 @@ function PasswordCard() {
   );
 }
 
-function BiodataCard() {
+const SESSIONS_KEY = ['auth', 'sessions'];
+
+/** "Chrome on Android" from a user-agent string; good enough to recognise a device. */
+function deviceName(userAgent, t) {
+  if (!userAgent) return t('settings.unknownDevice');
+  const ua = userAgent;
+  const browser =
+    [
+      [/Edg\//, 'Edge'],
+      [/OPR\/|Opera/, 'Opera'],
+      [/SamsungBrowser/, 'Samsung Internet'],
+      [/Firefox\//, 'Firefox'],
+      [/Chrome\//, 'Chrome'],
+      [/Safari\//, 'Safari'],
+    ].find(([re]) => re.test(ua))?.[1] ?? null;
+  const os =
+    [
+      [/Android/, 'Android'],
+      [/iPhone|iPad|iPod/, 'iOS'],
+      [/Windows/, 'Windows'],
+      [/Mac OS X|Macintosh/, 'macOS'],
+      [/Linux/, 'Linux'],
+    ].find(([re]) => re.test(ua))?.[1] ?? null;
+  if (browser && os) return t('settings.deviceOn', { browser, os });
+  return browser ?? os ?? t('settings.unknownDevice');
+}
+
+/** Where the account is signed in, with sign-out per device or everywhere. */
+function DevicesCard() {
   const { t, lang } = usePreferences();
   const toast = useToast();
-  const errorMessage = useErrorMessage();
+  const router = useRouter();
   const queryClient = useQueryClient();
-  const { data } = useQuery({ queryKey: MY_BIODATA_KEY, queryFn: biodataApi.mine });
-  const restoreQuery = useQuery({
-    queryKey: ['restore-request'],
-    queryFn: biodataApi.restoreRequest,
-    enabled: !!data?.biodata?.deletedAt,
-  });
-  const [confirm, setConfirm] = useState(false);
-  const [del, setDel] = useState({ reason: 'married_via_ghotok', note: '' });
-  const [restoreReason, setRestoreReason] = useState('');
-
-  const refresh = (result) => {
-    if (result?.biodata) queryClient.setQueryData(MY_BIODATA_KEY, result);
-    queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+  const errorMessage = useErrorMessage();
+  const [confirmAll, setConfirmAll] = useState(false);
+  const sessions = useQuery({ queryKey: SESSIONS_KEY, queryFn: authApi.sessions });
+  const signedOutHere = () => {
+    queryClient.clear();
+    queryClient.setQueryData(AUTH_KEY, null);
+    router.push('/login');
   };
-  const hide = useMutation({
-    mutationFn: (hidden) => biodataApi.setHidden(hidden),
-    onSuccess: refresh,
-    onError: (e) => toast.error(errorMessage(e)),
-  });
-  const remove = useMutation({
-    mutationFn: () => biodataApi.remove({ reason: del.reason, note: del.note || undefined }),
-    onSuccess: (result) => {
-      setConfirm(false);
-      refresh(result);
-    },
-  });
-  const restore = useMutation({
-    mutationFn: () => biodataApi.requestRestore(restoreReason || undefined),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['restore-request'] });
-      toast.success(t('dash.restorePending'));
+  const revoke = useMutation({
+    mutationFn: (session) => authApi.revokeSession(session.id),
+    onSuccess: (_res, session) => {
+      if (session.current) return signedOutHere();
+      toast.success(t('settings.deviceSignedOut'));
+      queryClient.invalidateQueries({ queryKey: SESSIONS_KEY });
     },
     onError: (e) => toast.error(errorMessage(e)),
   });
-
-  const biodata = data?.biodata;
-  if (!biodata) return null;
-
-  if (biodata.deletedAt) {
-    const request = restoreQuery.data?.request;
-    return (
-      <Card title={t('settings.restoreTitle')} id="delete">
-        <p className="text-muted">{t('dash.deletedText')}</p>
-        {request?.status === 'pending' ? (
-          <FormMessage tone="info">{t('dash.restorePending')}</FormMessage>
-        ) : (
-          <>
-            {request && (
-              <FormMessage tone="info">
-                {optionLabel(RESTORE_STATUS, request.status, lang)}
-                {request.note ? `: ${request.note}` : ''}
-              </FormMessage>
-            )}
-            <TextArea
-              label={t('settings.restoreReason')}
-              rows={3}
-              value={restoreReason}
-              onChange={(e) => setRestoreReason(e.target.value)}
-            />
-            <Button className="self-start" loading={restore.isPending} onClick={() => restore.mutate()}>
-              {t('dash.requestRestore')}
-            </Button>
-          </>
-        )}
-      </Card>
-    );
-  }
-
+  const everywhere = useMutation({
+    mutationFn: authApi.logoutEverywhere,
+    onSuccess: signedOutHere,
+    onError: (e) => toast.error(errorMessage(e)),
+  });
+  const items = sessions.data?.items ?? [];
   return (
-    <>
-      <Card title={t('settings.visibility')}>
-        <p className="text-muted">{t('settings.hiddenNote')}</p>
-        <Button
-          variant="outline"
-          className="self-start"
-          loading={hide.isPending}
-          onClick={() => hide.mutate(!biodata.isHidden)}
-        >
-          {biodata.isHidden ? t('settings.unhide') : t('settings.hide')}
-        </Button>
-      </Card>
-      <Card title={t('settings.deleteTitle')} id="delete">
-        <p className="text-muted">{t('settings.deleteText')}</p>
-        <Button variant="outlineRose" className="self-start" onClick={() => setConfirm(true)}>
-          {t('dash.delBio')}
-        </Button>
-      </Card>
-      <Modal
-        open={confirm}
-        onClose={() => setConfirm(false)}
-        title={t('settings.deleteTitle')}
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setConfirm(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button variant="danger" loading={remove.isPending} onClick={() => remove.mutate()}>
-              {t('settings.deleteConfirm')}
-            </Button>
-          </>
-        }
-      >
-        <FormMessage>{remove.error && errorMessage(remove.error)}</FormMessage>
-        <SelectInput
-          label={t('settings.deleteReason')}
-          value={del.reason}
-          onChange={(e) => setDel((d) => ({ ...d, reason: e.target.value }))}
-          options={DELETE_REASONS.map((r) => ({ value: r.value, label: r[lang] }))}
-        />
-        <TextArea
-          label={t('settings.deleteNote')}
-          rows={3}
-          maxLength={500}
-          value={del.note}
-          onChange={(e) => setDel((d) => ({ ...d, note: e.target.value }))}
-        />
-      </Modal>
-    </>
+    <Card title={t('settings.devices')}>
+      <p className="text-muted">{t('settings.devicesText')}</p>
+      {sessions.isLoading ? (
+        <LoadingBlock label={t('common.loading')} />
+      ) : (
+        <ul className="flex flex-col">
+          {items.map((s) => (
+            <li key={s.id} className="flex items-center justify-between gap-4 border-b border-line py-3.5">
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <span className="flex flex-wrap items-center gap-2">
+                  <b className="text-[15px]">{deviceName(s.userAgent, t)}</b>
+                  {s.current && <Pill tone="sage">{t('settings.thisDevice')}</Pill>}
+                </span>
+                <span className="text-[13px] text-muted">
+                  {[t('settings.lastActive', { when: dateTime(s.lastActiveAt, lang) }), s.ip]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </span>
+              </span>
+              <Button
+                size="sm"
+                variant="ghost"
+                loading={revoke.isPending && revoke.variables?.id === s.id}
+                onClick={() => revoke.mutate(s)}
+              >
+                {t('settings.signOutDevice')}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <Button variant="outlineRose" className="self-start" onClick={() => setConfirmAll(true)}>
+        {t('settings.signOutEverywhere')}
+      </Button>
+      <ConfirmDialog
+        open={confirmAll}
+        onClose={() => setConfirmAll(false)}
+        title={t('settings.signOutEverywhere')}
+        description={t('settings.signOutEverywhereText')}
+        confirmLabel={t('settings.signOutEverywhere')}
+        cancelLabel={t('common.cancel')}
+        loading={everywhere.isPending}
+        onConfirm={() => everywhere.mutate()}
+      />
+    </Card>
   );
 }
 
@@ -294,7 +289,8 @@ export function SettingsPage() {
       <PageTitle title={t('settings.title')} />
       <ProfileCard user={user} />
       <PasswordCard />
-      <BiodataCard />
+      <DevicesCard />
+      <BiodataManagement />
       <DeactivateCard />
     </>
   );

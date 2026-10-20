@@ -17,11 +17,30 @@ const initialValues = (section, saved) => {
   return values;
 };
 
+/** Wraps a field the reviewer asked to change, with their note underneath. */
+function Flagged({ field, correction, children }) {
+  const { t } = useT();
+  if (!correction) return children;
+  const wide = ['textarea', 'multiselect'].includes(field.type);
+  return (
+    <div
+      className={`flex flex-col gap-2 rounded-2xl p-3 ring-2 ${correction.changed ? 'ring-sage' : 'ring-gold'} ${wide ? 'sm:col-span-2' : ''}`}
+    >
+      {children}
+      <span className={`text-[13px] font-semibold ${correction.changed ? 'text-sage' : 'text-gold-text'}`}>
+        {correction.changed ? t('lifecycle.correctionDone') : t('lifecycle.correctionAsk')}
+        {correction.note ? `: ${correction.note}` : ''}
+      </span>
+    </div>
+  );
+}
+
 /**
  * Edits one biodata section. Values are checked with the same shared validator
- * the API uses; drafts may be incomplete but never invalid.
+ * the API uses; drafts may be incomplete but never invalid. `corrections` are the
+ * reviewer's requests for this section; `locked` shows the answers read-only.
  */
-export function SectionForm({ section, sections, onSaved, isLast }) {
+export function SectionForm({ section, sections, onSaved, isLast, corrections = [], locked = false }) {
   const { t, lang } = useT();
   const toast = useToast();
   const errorMessage = useErrorMessage();
@@ -48,6 +67,9 @@ export function SectionForm({ section, sections, onSaved, isLast }) {
     onError: (err) => {
       if (err.code === 'VALIDATION_ERROR') setErrors(err.fields);
       else toast.error(errorMessage(err));
+      // The biodata changed elsewhere (not started yet, or editing was paused): reload it.
+      if (['PLEDGE_REQUIRED', 'EDIT_SUSPENDED'].includes(err.code))
+        queryClient.invalidateQueries({ queryKey: MY_BIODATA_KEY });
     },
   });
 
@@ -69,32 +91,37 @@ export function SectionForm({ section, sections, onSaved, isLast }) {
   return (
     <Card as="form" onSubmit={submit(!isLast)} noValidate title={section.title[lang]}>
       {section.description && <FormMessage tone="info">{section.description[lang]}</FormMessage>}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-        {section.fields
-          .filter((f) => isFieldVisible(f, all))
-          .map((f) => (
-            <BiodataField
-              key={f.key}
-              field={f}
-              lang={lang}
-              text={fieldText}
-              value={values[f.key]}
-              values={values}
-              error={errors[f.key] && message(errors[f.key])}
-              onChange={(v) => setField(f.key, v)}
-            />
-          ))}
-      </div>
-      <div className="flex flex-wrap justify-end gap-3 border-t border-line pt-5">
-        <Button variant="outline" loading={save.isPending && action === 'save'} onClick={submit(false)}>
-          {t('editor.saveSection')}
-        </Button>
-        {!isLast && (
-          <Button type="submit" loading={save.isPending && action === 'next'}>
-            {t('editor.saveNext')}
+      <fieldset disabled={locked} className="min-w-0">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          {section.fields
+            .filter((f) => isFieldVisible(f, all))
+            .map((f) => (
+              <Flagged key={f.key} field={f} correction={corrections.find((c) => c.field === f.key)}>
+                <BiodataField
+                  field={f}
+                  lang={lang}
+                  text={fieldText}
+                  value={values[f.key]}
+                  values={values}
+                  error={errors[f.key] && message(errors[f.key])}
+                  onChange={(v) => setField(f.key, v)}
+                />
+              </Flagged>
+            ))}
+        </div>
+      </fieldset>
+      {!locked && (
+        <div className="flex flex-wrap justify-end gap-3 border-t border-line pt-5">
+          <Button variant="outline" loading={save.isPending && action === 'save'} onClick={submit(false)}>
+            {t('editor.saveSection')}
           </Button>
-        )}
-      </div>
+          {!isLast && (
+            <Button type="submit" loading={save.isPending && action === 'next'}>
+              {t('editor.saveNext')}
+            </Button>
+          )}
+        </div>
+      )}
     </Card>
   );
 }

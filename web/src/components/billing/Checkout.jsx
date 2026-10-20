@@ -1,10 +1,11 @@
 'use client';
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState } from 'react';
 import { isValidPhone } from '@ghotok/shared';
 import { Button, Card, FormMessage, Icon, TextInput } from '@ghotok/ui';
+import { TutorialLink } from '@/components/content/TutorialLink';
 import { AUTH_KEY, useAuth } from '@/hooks/use-auth';
 import { useErrorMessage } from '@/hooks/use-error-message';
 import { billingApi } from '@/lib/api/endpoints';
@@ -45,18 +46,41 @@ function Rich({ text }) {
   );
 }
 
+/** A package price, with the original struck through when the member has a discount. */
+function Price({ pkg, lang, className = '' }) {
+  if (!pkg.finalPrice || pkg.finalPrice === pkg.price)
+    return <span className={className}>{taka(pkg.price, lang)}</span>;
+  return (
+    <span className={`flex flex-wrap items-baseline gap-x-3 ${className}`}>
+      <span>{taka(pkg.finalPrice, lang)}</span>
+      <s className="text-[0.5em] text-muted">{taka(pkg.price, lang)}</s>
+    </span>
+  );
+}
+
 /**
  * Buying a connection package in three steps: package, method, payment.
- * With a configured gateway (bKash/Nagad) the member can pay online; otherwise
- * — and always for Rocket — they send money and submit the transaction ID.
+ * With a configured gateway (bKash/Nagad/SSLCommerz) the member can pay online;
+ * otherwise — and always for Rocket — they send money and submit the transaction ID.
+ * SSLCommerz (cards and mobile banking) is online only.
+ * @param {{ catalogue: object, initialPackageId?: string, settings?: { payments?: object, site?: object } }} props
  */
-export function Checkout({ catalogue, initialPackageId }) {
+export function Checkout({ catalogue: publicCatalogue, initialPackageId, settings = {} }) {
   const { t, lang } = useT();
   const { user, isLoading } = useAuth();
   const queryClient = useQueryClient();
   const errorMessage = useErrorMessage();
+  // The server renders the guest catalogue; a signed-in member's prices may include a discount.
+  const mine = useQuery({
+    queryKey: ['catalogue', user?.id],
+    queryFn: billingApi.catalogue,
+    enabled: !!user,
+    staleTime: 60_000,
+  });
+  const catalogue = (user && mine.data) || publicCatalogue;
   const { packages, methods, verificationHours } = catalogue;
   const enabledMethods = methods.filter((m) => m.enabled);
+  const { approvalGift = 0, approvedDiscountPercent = 0 } = settings.payments ?? {};
 
   const defaultPackage =
     packages.find((p) => p.id === initialPackageId) ?? packages.find((p) => p.highlight) ?? packages[0];
@@ -69,6 +93,7 @@ export function Checkout({ catalogue, initialPackageId }) {
   const pkg = packages.find((p) => p.id === packageId);
   const m = methods.find((x) => x.value === method);
   const methodName = m?.[lang] ?? '';
+  const price = pkg?.finalPrice ?? pkg?.price;
 
   const pay = useMutation({
     mutationFn: (mode) =>
@@ -133,9 +158,12 @@ export function Checkout({ catalogue, initialPackageId }) {
                     </span>
                   )}
                 </span>
-                <span className="font-display text-[40px] font-medium leading-none">
-                  {taka(p.price, lang)}
-                </span>
+                <Price pkg={p} lang={lang} className="font-display text-[40px] font-medium leading-none" />
+                {p.discountPercent > 0 && (
+                  <span className="w-fit rounded-full bg-sage-bg px-2.5 py-1 text-xs font-bold text-sage">
+                    {t('packages.discount', { n: digits(p.discountPercent, lang) })}
+                  </span>
+                )}
                 <span className="text-base font-semibold">
                   {t('common.connections', { n: digits(p.connections, lang) })}
                 </span>
@@ -148,7 +176,7 @@ export function Checkout({ catalogue, initialPackageId }) {
         </Card>
 
         <Card title={t('packages.step2')}>
-          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
             {methods.map((x) => (
               <Choice
                 key={x.value}
@@ -158,13 +186,16 @@ export function Checkout({ catalogue, initialPackageId }) {
                 onChange={() => setMethod(x.value)}
               >
                 <span className="text-base font-bold">{x[lang]}</span>
+                {x.gatewayOnly && x.enabled && (
+                  <span className="text-xs text-muted">{t('packages.cardsNote')}</span>
+                )}
                 {!x.enabled && <span className="text-xs text-muted">{t('packages.unavailable')}</span>}
               </Choice>
             ))}
           </div>
         </Card>
 
-        <Card title={t('packages.step3')}>
+        <Card title={t(m?.gatewayOnly ? 'packages.step3Online' : 'packages.step3')}>
           {!isLoading && !user ? (
             <Button href="/login?next=/packages" size="lg">
               {t('packages.loginFirst')}
@@ -182,51 +213,61 @@ export function Checkout({ catalogue, initialPackageId }) {
                   >
                     {t('packages.onlineCheckout', { method: methodName })}
                   </Button>
-                  <span className="pt-2 text-center text-sm font-semibold text-muted">
-                    {t('packages.or')}
-                  </span>
+                  {!m.gatewayOnly && (
+                    <span className="pt-2 text-center text-sm font-semibold text-muted">
+                      {t('packages.or')}
+                    </span>
+                  )}
                 </div>
               )}
-              <ol className="flex list-decimal flex-col gap-2 pl-5 text-[15px] leading-relaxed text-muted">
-                <li>
-                  <Rich
-                    text={t(m?.manualNumber ? 'packages.instructions1' : 'packages.instructions1NoNumber', {
-                      method: methodName,
-                      number: m?.manualNumber,
-                      amount: number(pkg.price, lang),
-                    })}
-                  />
-                </li>
-                <li>{t('packages.instructions2')}</li>
-                <li>{t('packages.instructions3', { hours: digits(verificationHours, lang) })}</li>
-              </ol>
-              <form className="flex flex-col gap-4" onSubmit={submitManual} noValidate>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <TextInput
-                    label={t('packages.senderNumber', { method: methodName })}
-                    type="tel"
-                    inputMode="tel"
-                    autoComplete="tel"
-                    placeholder="01XXXXXXXXX"
-                    required
-                    value={form.senderNumber}
-                    error={errors.senderNumber}
-                    onChange={(e) => setForm((f) => ({ ...f, senderNumber: e.target.value }))}
-                  />
-                  <TextInput
-                    label={t('packages.trxId')}
-                    placeholder={t('packages.trxPh')}
-                    required
-                    autoCapitalize="characters"
-                    value={form.trxId}
-                    error={errors.trxId}
-                    onChange={(e) => setForm((f) => ({ ...f, trxId: e.target.value }))}
-                  />
-                </div>
-                <Button type="submit" size="lg" loading={pay.isPending && pay.variables === 'manual'}>
-                  {t('packages.submit')}
-                </Button>
-              </form>
+              {!m?.gatewayOnly && (
+                <>
+                  <ol className="flex list-decimal flex-col gap-2 pl-5 text-[15px] leading-relaxed text-muted">
+                    <li>
+                      <Rich
+                        text={t(
+                          m?.manualNumber ? 'packages.instructions1' : 'packages.instructions1NoNumber',
+                          {
+                            method: methodName,
+                            number: m?.manualNumber,
+                            amount: number(price, lang),
+                          },
+                        )}
+                      />
+                    </li>
+                    <li>{t('packages.instructions2')}</li>
+                    <li>{t('packages.instructions3', { hours: digits(verificationHours, lang) })}</li>
+                  </ol>
+                  <form className="flex flex-col gap-4" onSubmit={submitManual} noValidate>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <TextInput
+                        label={t('packages.senderNumber', { method: methodName })}
+                        type="tel"
+                        inputMode="tel"
+                        autoComplete="tel"
+                        placeholder="01XXXXXXXXX"
+                        required
+                        value={form.senderNumber}
+                        error={errors.senderNumber}
+                        onChange={(e) => setForm((f) => ({ ...f, senderNumber: e.target.value }))}
+                      />
+                      <TextInput
+                        label={t('packages.trxId')}
+                        placeholder={t('packages.trxPh')}
+                        required
+                        autoCapitalize="characters"
+                        value={form.trxId}
+                        error={errors.trxId}
+                        onChange={(e) => setForm((f) => ({ ...f, trxId: e.target.value }))}
+                      />
+                    </div>
+                    <Button type="submit" size="lg" loading={pay.isPending && pay.variables === 'manual'}>
+                      {t('packages.submit')}
+                    </Button>
+                  </form>
+                </>
+              )}
+              <TutorialLink topic="buyConnections" className="self-start" />
             </>
           )}
         </Card>
@@ -242,13 +283,19 @@ export function Checkout({ catalogue, initialPackageId }) {
             </span>
             <span>{taka(pkg.price, lang)}</span>
           </div>
+          {price !== pkg.price && (
+            <div className="flex justify-between text-[15px] text-panel-muted">
+              <span>{t('packages.discount', { n: digits(pkg.discountPercent, lang) })}</span>
+              <span>−{taka(pkg.price - price, lang)}</span>
+            </div>
+          )}
           <div className="flex justify-between text-[15px] text-panel-muted">
             <span>{t('packages.method')}</span>
             <span>{methodName}</span>
           </div>
           <div className="flex justify-between border-t border-panel-line pt-4 text-xl font-extrabold">
             <span>{t('packages.total')}</span>
-            <span>{taka(pkg.price, lang)}</span>
+            <span>{taka(price, lang)}</span>
           </div>
           {user && (
             <p className="text-sm text-panel-muted">
@@ -258,6 +305,21 @@ export function Checkout({ catalogue, initialPackageId }) {
             </p>
           )}
         </section>
+        {(approvalGift > 0 || (approvedDiscountPercent > 0 && !pkg.discountPercent)) && (
+          <section className="flex flex-col gap-2 rounded-[20px] border border-gold bg-surface p-6 text-sm leading-relaxed">
+            <b className="text-[15px] text-gold-text">{t('packages.perksTitle')}</b>
+            {approvalGift > 0 && (
+              <p>
+                {t('packages.approvalGift', {
+                  n: t('common.connections', { n: digits(approvalGift, lang) }),
+                })}
+              </p>
+            )}
+            {approvedDiscountPercent > 0 && !pkg.discountPercent && (
+              <p>{t('packages.approvedDiscount', { n: digits(approvedDiscountPercent, lang) })}</p>
+            )}
+          </section>
+        )}
         <section className="flex flex-col gap-2 rounded-[20px] bg-sage-bg p-6">
           <b className="text-[15px] text-sage">{t('packages.refundTitle')}</b>
           <p className="text-sm leading-relaxed">

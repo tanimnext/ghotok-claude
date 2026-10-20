@@ -1,6 +1,6 @@
 import { Checkout } from '@/components/billing/Checkout';
 import { EmptyState } from '@ghotok/ui';
-import { getPublic } from '@/lib/api/server';
+import { getPublic, getPublicOr } from '@/lib/api/server';
 import { getTranslator } from '@/lib/preferences.server';
 
 export async function generateMetadata() {
@@ -11,7 +11,10 @@ export async function generateMetadata() {
 export default async function PackagesPage({ searchParams }) {
   const { t } = await getTranslator();
   const { package: packageId } = await searchParams;
-  const catalogue = await getPublic('/packages');
+  const [catalogue, settings] = await Promise.all([
+    getPublic('/packages'),
+    getPublicOr({}, '/public/settings', { revalidate: 300 }),
+  ]);
   return (
     <div className="container-page flex flex-col gap-9 pb-20 pt-10">
       <div className="flex max-w-2xl flex-col gap-2">
@@ -19,7 +22,7 @@ export default async function PackagesPage({ searchParams }) {
         <p className="text-[17px] leading-relaxed text-muted">{t('packages.sub')}</p>
       </div>
       {catalogue?.packages?.length ? (
-        <Checkout catalogue={catalogue} initialPackageId={packageId} />
+        <Checkout catalogue={catalogue} initialPackageId={packageId} settings={settings} />
       ) : (
         <EmptyState icon="card" title={t('packages.unavailable')} />
       )}

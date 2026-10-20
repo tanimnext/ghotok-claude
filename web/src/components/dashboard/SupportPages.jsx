@@ -19,6 +19,7 @@ import {
   TextArea,
   TextInput,
 } from '@ghotok/ui';
+import { AttachmentList, AttachmentPicker, useAttachments } from '@/components/support/Attachments';
 import { useErrorMessage } from '@/hooks/use-error-message';
 import { supportApi } from '@/lib/api/endpoints';
 import { date, dateTime } from '@/lib/format';
@@ -29,8 +30,13 @@ function NewTicketForm({ onCreated }) {
   const { t, lang } = useT();
   const errorMessage = useErrorMessage();
   const [form, setForm] = useState({ subject: '', category: 'other', message: '' });
+  const attachments = useAttachments();
   const create = useMutation({
-    mutationFn: () => supportApi.open(form),
+    mutationFn: () =>
+      supportApi.open({
+        ...form,
+        attachments: attachments.tickets.length ? attachments.tickets : undefined,
+      }),
     onSuccess: ({ ticket }) => onCreated(ticket),
   });
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -70,10 +76,11 @@ function NewTicketForm({ onCreated }) {
         onChange={set('message')}
         hint={t('validation.message')}
       />
+      <AttachmentPicker attachments={attachments} />
       <Button
         type="submit"
         className="self-end"
-        disabled={form.subject.trim().length < 4 || form.message.trim().length < 10}
+        disabled={form.subject.trim().length < 4 || form.message.trim().length < 10 || attachments.uploading}
         loading={create.isPending}
       >
         {t('support.create')}
@@ -128,8 +135,9 @@ export function SupportPage({ startNew }) {
                 className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 hover:bg-surface2"
               >
                 <span className="flex flex-col gap-0.5">
-                  <b className="text-[15px]">
+                  <b className="flex flex-wrap items-center gap-2 text-[15px]">
                     {ticket.ticketNo} · {ticket.subject}
+                    {ticket.hasNewReply && <Pill tone="gold">{t('support.newReply')}</Pill>}
                   </b>
                   <span className="text-[13px] text-muted">
                     {optionLabel(TICKET_CATEGORIES, ticket.category, lang)} ·{' '}
@@ -162,6 +170,7 @@ export function TicketThread({ id }) {
   const errorMessage = useErrorMessage();
   const queryClient = useQueryClient();
   const [message, setMessage] = useState('');
+  const attachments = useAttachments();
   const key = ['ticket', id];
   const { data, isLoading, error } = useQuery({ queryKey: key, queryFn: () => supportApi.get(id) });
   const update = ({ ticket }) => {
@@ -169,10 +178,17 @@ export function TicketThread({ id }) {
     queryClient.invalidateQueries({ queryKey: ['tickets'] });
   };
   const reply = useMutation({
-    mutationFn: () => supportApi.reply(id, message),
-    onSuccess: (res) => {
+    mutationFn: () =>
+      supportApi.reply(id, {
+        message,
+        attachments: attachments.tickets.length ? attachments.tickets : undefined,
+      }),
+    onSuccess: () => {
       setMessage('');
-      update(res);
+      attachments.reset();
+      // The reply response has no download links for the new files; load the thread again.
+      queryClient.invalidateQueries({ queryKey: key });
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
     },
   });
   const close = useMutation({ mutationFn: () => supportApi.close(id), onSuccess: update });
@@ -197,6 +213,14 @@ export function TicketThread({ id }) {
           <Pill tone={STATUS_TONE[ticket.status]}>{optionLabel(TICKET_STATUS, ticket.status, lang)}</Pill>
         }
       />
+      {ticket.biodataNo && (
+        <FormMessage tone="info">
+          {ticket.reportId ? t('support.aboutReport') : t('support.aboutBiodata')}{' '}
+          <Link href={`/biodatas/${ticket.biodataNo}`} className="underline">
+            {ticket.biodataNo}
+          </Link>
+        </FormMessage>
+      )}
       <ol className="flex flex-col gap-4">
         {(ticket.messages ?? []).map((m) => (
           <li
@@ -206,38 +230,45 @@ export function TicketThread({ id }) {
             <span className="text-[13px] font-bold text-muted">
               {m.staff ? m.author.name : t('support.you')} · {dateTime(m.createdAt, lang)}
             </span>
-            <p className="whitespace-pre-line text-[15px] leading-relaxed">{m.body}</p>
+            {m.body && <p className="whitespace-pre-line text-[15px] leading-relaxed">{m.body}</p>}
+            <AttachmentList files={m.attachments} />
           </li>
         ))}
       </ol>
-      {closed ? (
-        <FormMessage tone="info">{t('support.closed')}</FormMessage>
-      ) : (
-        <Card
-          as="form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            reply.mutate();
-          }}
-        >
-          <FormMessage>{reply.error && errorMessage(reply.error)}</FormMessage>
-          <TextArea
-            label={t('support.reply')}
-            rows={4}
-            maxLength={5000}
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-          />
-          <div className="flex flex-wrap justify-between gap-3">
+      {closed && <FormMessage tone="info">{t('support.closedReopen')}</FormMessage>}
+      <Card
+        as="form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          reply.mutate();
+        }}
+      >
+        <FormMessage>{reply.error && errorMessage(reply.error)}</FormMessage>
+        <TextArea
+          label={t('support.reply')}
+          rows={4}
+          maxLength={20000}
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+        />
+        <AttachmentPicker attachments={attachments} />
+        <div className="flex flex-wrap justify-between gap-3">
+          {closed ? (
+            <span />
+          ) : (
             <Button variant="ghost" loading={close.isPending} onClick={() => close.mutate()}>
               {t('support.close')}
             </Button>
-            <Button type="submit" disabled={!message.trim()} loading={reply.isPending}>
-              {t('support.send')}
-            </Button>
-          </div>
-        </Card>
-      )}
+          )}
+          <Button
+            type="submit"
+            disabled={(!message.trim() && !attachments.tickets.length) || attachments.uploading}
+            loading={reply.isPending}
+          >
+            {closed ? t('support.sendReopen') : t('support.send')}
+          </Button>
+        </div>
+      </Card>
     </>
   );
 }

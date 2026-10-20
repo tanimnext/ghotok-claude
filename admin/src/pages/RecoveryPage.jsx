@@ -84,6 +84,7 @@ export function RecoveryPage() {
                           <Pill tone={STATUS_TONE[r.status]}>
                             {optionLabel(RESTORE_STATUS, r.status, lang)}
                           </Pill>
+                          {r.permanent && <Pill tone="danger">{t('recovery.permanent')}</Pill>}
                           {r.note && <span className="text-xs text-muted">{r.note}</span>}
                         </span>
                       )}

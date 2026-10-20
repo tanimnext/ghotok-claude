@@ -6,21 +6,28 @@ import { api } from './client.js';
 export const authApi = {
   me: () => api.get('/auth/me'),
   login: (body) => api.post('/auth/login', body),
+  requestLoginCode: (body) => api.post('/auth/login/code', body),
+  loginWithCode: (body) => api.post('/auth/login/code/verify', body),
   register: (body) => api.post('/auth/register', body),
   verify: (body) => api.post('/auth/verify', body),
   resendOtp: (body) => api.post('/auth/resend-otp', body),
   forgotPassword: (body) => api.post('/auth/forgot-password', body),
   resetPassword: (body) => api.post('/auth/reset-password', body),
   logout: () => api.post('/auth/logout'),
+  sessions: () => api.get('/auth/sessions'),
+  revokeSession: (id) => api.delete(`/auth/sessions/${id}`),
+  logoutEverywhere: () => api.post('/auth/logout-all'),
 };
 
 export const biodataApi = {
   // The member's own biodata
   mine: () => api.get('/biodatas/me'),
+  create: () => api.post('/biodatas/me', { pledge: true }),
   saveSection: (section, data) => api.put(`/biodatas/me/sections/${section}`, { data }),
   submit: () => api.post('/biodatas/me/submit'),
-  setHidden: (hidden) => api.patch('/biodatas/me/visibility', { hidden }),
+  setVisibility: (body) => api.patch('/biodatas/me/visibility', body),
   remove: (body) => api.delete('/biodatas/me', body),
+  restore: () => api.post('/biodatas/me/restore'),
   restoreRequest: () => api.get('/biodatas/me/restore-request'),
   requestRestore: (reason) => api.post('/biodatas/me/restore-request', { reason }),
   photoUploadUrl: () => api.post('/biodatas/me/photo/upload-url'),
@@ -29,6 +36,7 @@ export const biodataApi = {
   removePhoto: () => api.delete('/biodatas/me/photo'),
   nidUploadUrl: (side, contentType) => api.post('/biodatas/me/nid/upload-url', { side, contentType }),
   submitNid: (body) => api.post('/biodatas/me/nid', body),
+  partnerLookup: (no) => api.get('/biodatas/partner-lookup', { no }),
 
   // Other members' biodatas
   search: (query) => api.get('/biodatas', query),
@@ -58,6 +66,7 @@ export const accountApi = {
   withdrawProposal: (id) => api.post(`/me/proposals/${id}/withdraw`),
   notifications: (page) => api.get('/me/notifications', { page }),
   markAllRead: () => api.post('/me/notifications/read-all'),
+  deleteNotification: (id) => api.delete(`/me/notifications/${id}`),
   connections: (page) => api.get('/me/connections', { page }),
 };
 
@@ -65,6 +74,7 @@ export const billingApi = {
   catalogue: () => api.get('/packages'),
   createPayment: (body) => api.post('/payments', body),
   myPayments: (page) => api.get('/payments/mine', { page }),
+  paymentStatus: (invoiceNo) => api.get(`/payments/status/${encodeURIComponent(invoiceNo)}`),
   requestRefund: (body) => api.post('/refunds', body),
 };
 
@@ -72,7 +82,13 @@ export const supportApi = {
   tickets: (page) => api.get('/tickets', { page }),
   open: (body) => api.post('/tickets', body),
   get: (id) => api.get(`/tickets/${id}`),
-  reply: (id, message) => api.post(`/tickets/${id}/messages`, { message }),
+  reply: (id, body) => api.post(`/tickets/${id}/messages`, body),
+  attachmentUploadUrl: (body) => api.post('/tickets/attachments/upload-url', body),
   close: (id) => api.post(`/tickets/${id}/close`),
   contact: (body) => api.post('/contact', body),
+};
+
+export const contentApi = {
+  publicSettings: () => api.get('/public/settings'),
+  downloadBanner: (id) => api.post(`/public/banners/${id}/download`),
 };

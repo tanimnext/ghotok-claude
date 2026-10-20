@@ -1,4 +1,5 @@
 import { biodataCompletion } from '@ghotok/shared';
+import { User } from '../models/index.js';
 import * as biodataService from '../services/biodata.service.js';
 import { unlockContact } from '../services/connection.service.js';
 import * as listService from '../services/list.service.js';
@@ -118,7 +119,9 @@ export async function featured(req, res) {
 }
 
 export async function getPublic(req, res) {
-  res.json({ biodata: toPublicDetail(await biodataService.findPublic(req.params.no)) });
+  const biodata = await biodataService.findPublic(req.params.no);
+  const owner = await User.findById(biodata.user).select('emailVerified phoneVerified').lean();
+  res.json({ biodata: toPublicDetail(biodata, owner) });
 }
 
 /** Counts a profile view: members by account, anonymous visitors by a long-lived cookie. */

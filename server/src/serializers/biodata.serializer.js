@@ -31,10 +31,14 @@ export function toCard(b, { showPhoto = false } = {}) {
   };
 }
 
-/** Public profile: every non-private field. */
-export function toPublicDetail(b) {
+/**
+ * Public profile: every non-private field.
+ * @param {object} [owner] the owner's account, for the verified email/phone badges
+ */
+export function toPublicDetail(b, owner) {
   return {
     ...toCard(b),
+    verified: { email: !!owner?.emailVerified, phone: !!owner?.phoneVerified },
     sections: publicSections(b.sectionsObject()),
     views: b.stats?.views ?? 0,
     updatedAt: b.updatedAt,

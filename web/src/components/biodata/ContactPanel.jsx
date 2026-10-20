@@ -3,8 +3,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState } from 'react';
-import { GUARDIAN_RELATIONS, optionLabel } from '@ghotok/shared';
+import { GUARDIAN_RELATIONS, REPORT_STATUS, optionLabel } from '@ghotok/shared';
 import { Button, FormMessage, Icon, Modal, TextArea } from '@ghotok/ui';
+import { TutorialLink } from '@/components/content/TutorialLink';
 import { AUTH_KEY, useAuth } from '@/hooks/use-auth';
 import { useErrorMessage } from '@/hooks/use-error-message';
 import { biodataApi } from '@/lib/api/endpoints';
@@ -76,6 +77,7 @@ export function ContactPanel({ biodataNo }) {
   const balance = viewer?.balance ?? user?.connectionBalance ?? 0;
   const contact = viewer?.contact;
   const proposal = viewer?.proposal;
+  const report = viewer?.report;
 
   if (viewer?.isOwner) {
     return (
@@ -130,6 +132,9 @@ export function ContactPanel({ biodataNo }) {
             </span>
           </div>
           <p className="text-sm leading-relaxed text-muted">{t('detail.unlockNote')}</p>
+          <p className="rounded-2xl bg-surface2 px-4 py-3 text-[13px] leading-relaxed">
+            <b>{t('detail.cautionTitle')}</b> {t('detail.cautionText')}
+          </p>
           {!isLoading && !user ? (
             <Button href={`/login?next=/biodatas/${biodataNo}`} size="lg">
               {t('detail.loginToUnlock')}
@@ -143,7 +148,26 @@ export function ContactPanel({ biodataNo }) {
               {t('detail.unlock')}
             </Button>
           )}
+          <TutorialLink topic="viewContact" className="self-center" />
         </>
+      )}
+
+      {viewer?.refunded && <FormMessage tone="success">{t('detail.refunded')}</FormMessage>}
+      {report && (
+        <p className="rounded-2xl bg-surface2 px-4 py-3 text-sm">
+          {t('detail.reportStatus', { status: optionLabel(REPORT_STATUS, report.status, lang) })}
+          {report.ticketId && (
+            <>
+              {' '}
+              <Link
+                href={`/dashboard/support/${report.ticketId}`}
+                className="font-bold text-rose-text underline"
+              >
+                {t('detail.reportOpenTicket')}
+              </Link>
+            </>
+          )}
+        </p>
       )}
 
       {user && !proposal && (
@@ -188,6 +212,7 @@ export function ContactPanel({ biodataNo }) {
         }
       >
         <p className="text-muted">{t('detail.confirmUnlockText', { n: digits(balance, lang) })}</p>
+        <p className="rounded-2xl bg-surface2 px-4 py-3 text-sm leading-relaxed">{t('detail.cautionText')}</p>
       </Modal>
 
       <Modal

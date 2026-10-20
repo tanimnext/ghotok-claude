@@ -69,5 +69,8 @@ describe('biodata search', () => {
     const { biodata, sections } = await approvedBiodata({ index: 4 });
     const res = await request(app).get(`/api/biodatas/${biodata.biodataNo}`);
     expect(res.body.biodata.sections.general.dateOfBirth).toBe(sections.general.dateOfBirth.slice(0, 7));
+    // The owner's verified email shows as a badge; the address itself stays private.
+    expect(res.body.biodata.verified).toEqual({ email: true, phone: false });
+    expect(JSON.stringify(res.body)).not.toContain('@example.com');
   });
 });

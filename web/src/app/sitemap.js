@@ -9,9 +9,12 @@ const STATIC = [
   '/guide',
   '/faq',
   '/contact',
+  '/success-stories',
+  '/banners',
   '/privacy-policy',
   '/terms',
   '/refund-policy',
+  '/child-safety',
 ];
 
 /** Static pages plus the most recent approved biodatas. Regenerated hourly. */

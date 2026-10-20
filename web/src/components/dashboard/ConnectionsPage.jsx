@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import Link from 'next/link';
 import { useState } from 'react';
 import { LEDGER_TYPES, PAYMENT_METHODS, PAYMENT_STATUS, REFUND_STATUS, optionLabel } from '@ghotok/shared';
 import {
@@ -135,7 +136,17 @@ export function ConnectionsPage({ paymentResult }) {
                 {payments.data.items.map((p) => (
                   <tr key={p.id}>
                     <td className={td}>{date(p.createdAt, lang)}</td>
-                    <td className={td}>{t('common.connections', { n: digits(p.connections, lang) })}</td>
+                    <td className={td}>
+                      <div className="flex flex-col gap-0.5">
+                        {t('common.connections', { n: digits(p.connections, lang) })}
+                        <Link
+                          href={`/dashboard/payment/${encodeURIComponent(p.invoiceNo)}`}
+                          className="text-xs font-semibold text-rose-text underline"
+                        >
+                          {p.invoiceNo}
+                        </Link>
+                      </div>
+                    </td>
                     <td className={td}>{optionLabel(PAYMENT_METHODS, p.method, lang)}</td>
                     <td className={`${td} font-mono text-sm`}>{p.trxId ?? '—'}</td>
                     <td className={`${td} font-bold`}>{taka(p.amount, lang)}</td>

@@ -11,6 +11,8 @@ const COLUMNS = [
       ['/biodatas', 'nav.browse'],
       ['/packages', 'nav.pricing'],
       ['/#how', 'nav.how'],
+      ['/success-stories', 'nav.stories'],
+      ['/banners', 'nav.banners'],
       ['/about', 'nav.about'],
     ],
   },
@@ -28,6 +30,7 @@ const COLUMNS = [
       ['/privacy-policy', 'footer.privacy'],
       ['/terms', 'footer.terms'],
       ['/refund-policy', 'footer.refund'],
+      ['/child-safety', 'footer.childSafety'],
     ],
   },
 ];
@@ -55,6 +58,16 @@ export async function SiteFooter() {
           {site.supportEmail && (
             <a href={`mailto:${site.supportEmail}`} className="text-sm text-muted hover:text-rose-text">
               {site.supportEmail}
+            </a>
+          )}
+          {site.appUrl && (
+            <a
+              href={site.appUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex w-fit items-center gap-2 rounded-full border-[1.5px] border-gold px-5 py-2.5 text-sm font-bold hover:bg-surface2"
+            >
+              {t('footer.getApp')}
             </a>
           )}
           {socials.length > 0 && (

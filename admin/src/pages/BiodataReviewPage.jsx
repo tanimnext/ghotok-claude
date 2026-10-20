@@ -23,23 +23,18 @@ import {
   STATUS_TONE,
   useToast,
 } from '@ghotok/ui';
+import { EditSuspension } from '../components/EditSuspension.jsx';
 import { NidReview } from '../components/NidReview.jsx';
 import { PageHeader } from '../components/PageHeader.jsx';
+import { RejectDialog } from '../components/RejectDialog.jsx';
 import { SectionEditor } from '../components/SectionEditor.jsx';
 import { UserCell } from '../components/UserCell.jsx';
 import { useErrorMessage } from '../hooks/useErrorMessage.js';
 import { adminApi } from '../lib/api.js';
 import { useT } from '../providers/PreferencesProvider.jsx';
 
-/** The decisions that need a typed reason, keyed by the dialog that asks for it. */
+/** The decisions that need a typed reason, keyed by the dialog that asks for it. ("reject" has its own dialog.) */
 const DIALOGS = {
-  reject: {
-    title: 'biodatas.rejectTitle',
-    label: 'biodatas.rejectReason',
-    confirm: 'biodatas.reject',
-    minLength: 5,
-    run: (id, text) => adminApi.rejectBiodata(id, text),
-  },
   block: {
     title: 'biodatas.block',
     label: 'biodatas.blockReason',
@@ -101,6 +96,11 @@ export function BiodataReviewPage() {
     .map((s) => BIODATA_SECTIONS.find((x) => x.key === s.key)?.title[lang]);
   const deleted = !!b.deletedAt;
   const active = dialog && DIALOGS[dialog];
+  const fieldLabel = (c) => {
+    const section = BIODATA_SECTIONS.find((s) => s.key === c.section);
+    const field = section?.fields.find((f) => f.key === c.field);
+    return `${section?.title[lang] ?? c.section} › ${field?.label[lang] ?? c.field}`;
+  };
 
   return (
     <>
@@ -117,6 +117,7 @@ export function BiodataReviewPage() {
             {b.isHidden && <Pill tone="muted">{t('biodatas.hidden')}</Pill>}
             {b.blocked && <Pill tone="danger">{t('biodatas.blocked')}</Pill>}
             {deleted && <Pill tone="danger">{t('biodatas.deleted')}</Pill>}
+            {b.editSuspendedUntil && <Pill tone="warn">{t('biodatas.suspend.pill')}</Pill>}
           </span>
         }
       />
@@ -125,6 +126,26 @@ export function BiodataReviewPage() {
         <div className="flex min-w-0 flex-col gap-6">
           {b.status === 'rejected' && b.rejectionReason && (
             <FormMessage tone="info">{t('biodatas.rejection', { reason: b.rejectionReason })}</FormMessage>
+          )}
+          {b.corrections?.length > 0 && (
+            <Card title={t('biodatas.corrections.title')}>
+              <ul className="flex flex-col">
+                {b.corrections.map((c) => (
+                  <li
+                    key={`${c.section}.${c.field}`}
+                    className="flex flex-wrap items-start justify-between gap-3 border-t border-line py-3 text-sm"
+                  >
+                    <span className="flex min-w-0 flex-col gap-0.5">
+                      <b>{fieldLabel(c)}</b>
+                      {c.note && <span className="text-muted">{c.note}</span>}
+                    </span>
+                    <Pill tone={c.changed ? 'sage' : 'warn'}>
+                      {t(c.changed ? 'biodatas.corrections.changed' : 'biodatas.corrections.unchanged')}
+                    </Pill>
+                  </li>
+                ))}
+              </ul>
+            </Card>
           )}
           {deleted && (
             <FormMessage>
@@ -195,6 +216,8 @@ export function BiodataReviewPage() {
               </div>
             )}
           </Card>
+
+          {!deleted && <EditSuspension biodataId={id} until={b.editSuspendedUntil} onSaved={refresh} />}
 
           <Card title={t('biodatas.owner')}>
             <UserCell user={owner} />
@@ -277,6 +300,17 @@ export function BiodataReviewPage() {
           section={editing}
           sections={b.sections}
           onClose={() => setEditing(null)}
+        />
+      )}
+      {dialog === 'reject' && (
+        <RejectDialog
+          biodataId={id}
+          biodataNo={b.biodataNo}
+          onClose={() => setDialog(null)}
+          onDone={() => {
+            setDialog(null);
+            refresh();
+          }}
         />
       )}
       <NidReview biodataId={id} biodataNo={b.biodataNo} open={nidOpen} onClose={() => setNidOpen(false)} />

@@ -9,15 +9,17 @@ import {
   SafetyPanel,
   StatsBand,
 } from '@/components/home/HomeSections';
+import { SuccessStoriesBand } from '@/components/content/SuccessStories';
 import { getPublicOr } from '@/lib/api/server';
 import { getTranslator } from '@/lib/preferences.server';
 
 export default async function HomePage() {
   const { t, lang } = await getTranslator();
-  const [stats, featured, catalogue] = await Promise.all([
+  const [stats, featured, catalogue, stories] = await Promise.all([
     getPublicOr(null, '/public/stats', { revalidate: 60 }),
     getPublicOr({ items: [] }, '/biodatas/featured?limit=4', { revalidate: 60 }),
     getPublicOr({ packages: [] }, '/packages', { revalidate: 300 }),
+    getPublicOr({ items: [] }, '/public/success-stories', { revalidate: 300 }),
   ]);
   return (
     <>
@@ -28,6 +30,7 @@ export default async function HomePage() {
       <HowItWorks t={t} />
       <FeaturedBiodatas t={t} items={featured.items} />
       <SafetyPanel t={t} />
+      <SuccessStoriesBand t={t} lang={lang} items={stories.items} />
       <PricingTeaser t={t} lang={lang} packages={catalogue.packages.slice(0, 2)} />
       <ClosingCta t={t} />
     </>

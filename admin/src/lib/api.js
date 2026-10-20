@@ -1,4 +1,4 @@
-import { api } from '@ghotok/shared/api-client';
+import { api, uploadFile } from '@ghotok/shared/api-client';
 
 // One function per admin API endpoint, grouped by area. Pages call these and
 // never build URLs themselves. See docs/API.md for the server side.
@@ -17,7 +17,9 @@ export const adminApi = {
   biodatas: (query) => api.get('/admin/biodatas', query),
   biodata: (id) => api.get(`/admin/biodatas/${id}`),
   approveBiodata: (id) => api.post(`/admin/biodatas/${id}/approve`),
-  rejectBiodata: (id, reason) => api.post(`/admin/biodatas/${id}/reject`, { reason }),
+  rejectBiodata: (id, reason, corrections) =>
+    api.post(`/admin/biodatas/${id}/reject`, { reason, corrections }),
+  suspendEdit: (id, body) => api.post(`/admin/biodatas/${id}/suspend-edit`, body),
   editSection: (id, section, data) => api.put(`/admin/biodatas/${id}/sections/${section}`, { data }),
   blockBiodata: (id, blocked, reason) => api.post(`/admin/biodatas/${id}/block`, { blocked, reason }),
   deleteBiodata: (id, reason) => api.post(`/admin/biodatas/${id}/delete`, { reason }),
@@ -27,7 +29,7 @@ export const adminApi = {
   rejectNid: (id, note) => api.post(`/admin/biodatas/${id}/nid/reject`, { note }),
   restoreRequests: (query) => api.get('/admin/restore-requests', query),
   approveRestore: (id) => api.post(`/admin/restore-requests/${id}/approve`, {}),
-  declineRestore: (id, note) => api.post(`/admin/restore-requests/${id}/decline`, { note }),
+  declineRestore: (id, body) => api.post(`/admin/restore-requests/${id}/decline`, body),
 
   users: (query) => api.get('/admin/users', query),
   user: (id) => api.get(`/admin/users/${id}`),
@@ -53,6 +55,8 @@ export const adminApi = {
   tickets: (query) => api.get('/admin/tickets', query),
   ticket: (id) => api.get(`/admin/tickets/${id}`),
   replyToTicket: (id, body) => api.post(`/admin/tickets/${id}/messages`, body),
+  // Staff attach files with the same upload endpoint members use; the ticket is tied to the uploader.
+  attachmentUploadUrl: (body) => api.post('/tickets/attachments/upload-url', body),
   updateTicket: (id, body) => api.patch(`/admin/tickets/${id}`, body),
   contactMessages: (query) => api.get('/admin/contact-messages', query),
   updateContactMessage: (id, status) => api.patch(`/admin/contact-messages/${id}`, { status }),
@@ -66,4 +70,23 @@ export const adminApi = {
   createFaq: (body) => api.post('/admin/faqs', body),
   updateFaq: (id, body) => api.patch(`/admin/faqs/${id}`, body),
   deleteFaq: (id) => api.delete(`/admin/faqs/${id}`),
+
+  marriageReports: (query) => api.get('/admin/marriage-reports', query),
+  updateStory: (id, body) => api.patch(`/admin/marriage-reports/${id}`, body),
+  banners: () => api.get('/admin/banners'),
+  bannerUploadUrl: (body) => api.post('/admin/banners/upload-url', body),
+  createBanner: (body) => api.post('/admin/banners', body),
+  updateBanner: (id, body) => api.patch(`/admin/banners/${id}`, body),
+  deleteBanner: (id) => api.delete(`/admin/banners/${id}`),
 };
+
+/**
+ * Uploads a file in two steps: asks the API for an upload target, sends the file
+ * there, and returns the signed ticket to attach to the next request.
+ * @param {(meta: { contentType: string, size: number, name: string }) => Promise<{ ticket: string }>} getTarget
+ */
+export async function uploadWithTicket(getTarget, file, extra = {}) {
+  const target = await getTarget({ contentType: file.type, size: file.size, ...extra });
+  await uploadFile(target, file);
+  return target.ticket;
+}

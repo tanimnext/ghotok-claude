@@ -1,4 +1,5 @@
 import { LoginForm } from '@/components/auth/LoginForm';
+import { getPublicOr } from '@/lib/api/server';
 import { getTranslator } from '@/lib/preferences.server';
 
 export async function generateMetadata() {
@@ -7,6 +8,9 @@ export async function generateMetadata() {
 }
 
 export default async function LoginPage({ searchParams }) {
-  const { next } = await searchParams;
-  return <LoginForm next={next} />;
+  const [{ next, error }, settings] = await Promise.all([
+    searchParams,
+    getPublicOr({}, '/public/settings', { revalidate: 300 }),
+  ]);
+  return <LoginForm next={next} googleEnabled={!!settings.auth?.google} redirectError={error} />;
 }

@@ -1,33 +1,30 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
+import { useState } from 'react';
 import { BIODATA_STATUS, BIODATA_TYPES, DISTRICTS, PROPOSAL_STATUS, optionLabel } from '@ghotok/shared';
 import { ArchPortrait } from '@/components/biodata/ArchPortrait';
-import { Button, Card, FormMessage, LoadingBlock, Pill, STATUS_TONE, Switch } from '@ghotok/ui';
-import { useErrorMessage } from '@/hooks/use-error-message';
+import { Button, Card, FormMessage, LoadingBlock, Pill, STATUS_TONE } from '@ghotok/ui';
 import { accountApi, biodataApi } from '@/lib/api/endpoints';
 import { date, digits, number } from '@/lib/format';
 import { useT } from '@/providers/PreferencesProvider';
-import { useToast } from '@ghotok/ui';
+import { MY_BIODATA_KEY } from './biodata-editor/keys.js';
+import { CopyBiodataNo } from './biodata-lifecycle/CopyBiodataNo.jsx';
+import { DeleteDialog } from './biodata-lifecycle/DeleteDialog.jsx';
+import { VisibilitySwitch } from './biodata-lifecycle/HideDialog.jsx';
+import { RestorePanel } from './biodata-lifecycle/RestorePanel.jsx';
 import { PageTitle } from './DashboardShell.jsx';
 
 export const DASHBOARD_KEY = ['dashboard'];
 
 function BiodataCardPanel({ biodata }) {
   const { t, lang } = useT();
-  const toast = useToast();
-  const errorMessage = useErrorMessage();
-  const queryClient = useQueryClient();
-  const visibility = useMutation({
-    mutationFn: (hidden) => biodataApi.setHidden(hidden),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: DASHBOARD_KEY }),
-    onError: (err) => toast.error(errorMessage(err)),
-  });
-  const restore = useMutation({
-    mutationFn: () => biodataApi.requestRestore(),
-    onSuccess: () => toast.success(t('dash.restorePending')),
-    onError: (err) => toast.error(errorMessage(err)),
+  // The full owner view says whether a deleted biodata can come back without review.
+  const own = useQuery({
+    queryKey: MY_BIODATA_KEY,
+    queryFn: biodataApi.mine,
+    enabled: !!biodata?.deletedAt,
   });
 
   if (!biodata) {
@@ -40,7 +37,6 @@ function BiodataCardPanel({ biodata }) {
   }
 
   const meta = [
-    biodata.biodataNo,
     optionLabel(BIODATA_TYPES, biodata.type, lang),
     optionLabel(DISTRICTS, biodata.district, lang),
   ]
@@ -58,16 +54,7 @@ function BiodataCardPanel({ biodata }) {
       {biodata.deletedAt ? (
         <div className="flex flex-col gap-3 rounded-[20px] bg-danger-bg p-5">
           <b className="text-danger">{t('dash.deletedTitle')}</b>
-          <p className="text-sm">{t('dash.deletedText')}</p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="self-start"
-            loading={restore.isPending}
-            onClick={() => restore.mutate()}
-          >
-            {t('dash.requestRestore')}
-          </Button>
+          {own.data?.biodata && <RestorePanel biodata={own.data.biodata} card={false} />}
         </div>
       ) : (
         <>
@@ -79,7 +66,8 @@ function BiodataCardPanel({ biodata }) {
           <div className="flex items-center gap-5">
             <ArchPortrait className="h-[88px] w-[72px] flex-none" />
             <div className="flex flex-col gap-1.5 text-[15px] text-muted">
-              <span>{meta}</span>
+              <CopyBiodataNo biodataNo={biodata.biodataNo} />
+              {meta && <span>{meta}</span>}
               <span className="font-semibold text-ink">
                 {t('dash.complete', { n: digits(biodata.completion, lang) })}
               </span>
@@ -95,12 +83,7 @@ function BiodataCardPanel({ biodata }) {
                 {!live ? t('dash.visDraft') : biodata.isHidden ? t('dash.visOff') : t('dash.visOn')}
               </span>
             </span>
-            <Switch
-              checked={!biodata.isHidden}
-              label={t('dash.visible')}
-              disabled={visibility.isPending}
-              onChange={(visible) => visibility.mutate(!visible)}
-            />
+            <VisibilitySwitch biodata={biodata} label={t('dash.visible')} />
           </div>
           <div className="flex flex-wrap gap-3">
             <Button href="/dashboard/biodata" className="flex-1">
@@ -154,6 +137,7 @@ function BalancePanel({ connections }) {
 
 export function DashboardOverview() {
   const { t, lang } = useT();
+  const [deleting, setDeleting] = useState(false);
   const { data, isLoading } = useQuery({ queryKey: DASHBOARD_KEY, queryFn: accountApi.dashboard });
   if (isLoading || !data) return <LoadingBlock label={t('common.loading')} />;
 
@@ -249,13 +233,14 @@ export function DashboardOverview() {
           <Button href="/dashboard/support?new=1" variant="outline" size="sm">
             {t('dash.newTicket')}
           </Button>
-          {data.biodata && (
-            <Button href="/dashboard/settings#delete" variant="outlineRose" size="sm">
+          {data.biodata && !data.biodata.deletedAt && (
+            <Button variant="outlineRose" size="sm" onClick={() => setDeleting(true)}>
               {t('dash.delBio')}
             </Button>
           )}
         </div>
       </section>
+      <DeleteDialog open={deleting} onClose={() => setDeleting(false)} />
     </>
   );
 }

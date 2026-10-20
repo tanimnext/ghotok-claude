@@ -77,6 +77,16 @@ export default async function BiodataPage({ params }) {
                     <Icon name="shield" size={13} strokeWidth={2.4} /> {t('card.verified')}
                   </Pill>
                 )}
+                {b.verified?.phone && (
+                  <Pill tone="sage">
+                    <Icon name="phone" size={13} strokeWidth={2.4} /> {t('detail.phoneVerified')}
+                  </Pill>
+                )}
+                {b.verified?.email && (
+                  <Pill tone="sage">
+                    <Icon name="mail" size={13} strokeWidth={2.4} /> {t('detail.emailVerified')}
+                  </Pill>
+                )}
                 <Pill tone="rose">{t('detail.approved')}</Pill>
               </div>
               <h1 className="font-display text-[32px] font-medium leading-title">

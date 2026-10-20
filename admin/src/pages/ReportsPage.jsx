@@ -1,12 +1,23 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { REPORT_REASONS, REPORT_STATUS, optionLabel } from '@ghotok/shared';
+import { REPORT_REASONS, REPORT_STATUS, can, optionLabel } from '@ghotok/shared';
 import { date, digits } from '@ghotok/shared/format';
-import { Button, Pill, PromptDialog, STATUS_TONE, Tabs, useToast } from '@ghotok/ui';
+import {
+  Button,
+  Checkbox,
+  FormMessage,
+  Modal,
+  Pill,
+  STATUS_TONE,
+  Tabs,
+  TextArea,
+  useToast,
+} from '@ghotok/ui';
 import { DataCard } from '../components/DataCard.jsx';
 import { PageHeader } from '../components/PageHeader.jsx';
 import { UserCell } from '../components/UserCell.jsx';
+import { useAuth } from '../hooks/useAuth.js';
 import { useErrorMessage } from '../hooks/useErrorMessage.js';
 import { usePageParam, useQueryParam } from '../hooks/useQueryParam.js';
 import { adminApi } from '../lib/api.js';
@@ -14,11 +25,67 @@ import { useT } from '../providers/PreferencesProvider.jsx';
 
 const TABS = ['active', 'resolved', 'dismissed', 'all'];
 
+/**
+ * Resolves or dismisses a report with a note for the reporter. When the reporter
+ * had paid to unlock the contact, resolving can also give their connection back.
+ */
+function CloseReportDialog({ report, status, loading, error, onConfirm, onClose }) {
+  const { t } = useT();
+  const [text, setText] = useState('');
+  const [refund, setRefund] = useState(false);
+  const resolving = status === 'resolved';
+  const canRefund = resolving && report.reporterUnlocked && !report.connectionRefunded;
+  const label = t(`reports.${resolving ? 'resolve' : 'dismiss'}`);
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={label}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            {t('common.cancel')}
+          </Button>
+          <Button
+            disabled={resolving && text.trim().length < 3}
+            loading={loading}
+            onClick={() =>
+              onConfirm({ actionTaken: text.trim() || undefined, refundConnection: canRefund && refund })
+            }
+          >
+            {label}
+          </Button>
+        </>
+      }
+    >
+      {report.biodata && <p className="text-muted">{report.biodata.biodataNo}</p>}
+      <FormMessage>{error}</FormMessage>
+      <TextArea
+        label={t('reports.actionTaken')}
+        rows={3}
+        required={resolving}
+        maxLength={500}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+      />
+      {canRefund && (
+        <Checkbox
+          label={t('reports.refundConnection')}
+          checked={refund}
+          onChange={(e) => setRefund(e.target.checked)}
+        />
+      )}
+    </Modal>
+  );
+}
+
 export function ReportsPage() {
   const { t, lang } = useT();
   const toast = useToast();
   const errorMessage = useErrorMessage();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const canOpenTickets = can(user.role, 'tickets.manage');
   const [status, setStatus] = useQueryParam('status', 'active');
   const [page, setPage] = usePageParam();
   // { report, status: 'resolved' | 'dismissed' } while the closing dialog is open.
@@ -59,17 +126,32 @@ export function ReportsPage() {
                       {r.timesReported > 1 && (
                         <Pill tone="danger">{t('reports.times', { n: digits(r.timesReported, lang) })}</Pill>
                       )}
+                      {r.reporterUnlocked && (
+                        <Pill tone={r.connectionRefunded ? 'sage' : 'muted'}>
+                          {t(r.connectionRefunded ? 'reports.refunded' : 'reports.unlocked')}
+                        </Pill>
+                      )}
                     </span>
                     <span className="text-sm text-muted">{date(r.createdAt, lang)}</span>
                   </div>
-                  {r.biodata && (
-                    <Link
-                      to={`/biodatas/${r.biodata.id}`}
-                      className="text-sm font-bold text-rose-text hover:underline"
-                    >
-                      {r.biodata.biodataNo} · {t('reports.openBiodata')}
-                    </Link>
-                  )}
+                  <span className="flex flex-col items-end gap-1">
+                    {r.biodata && (
+                      <Link
+                        to={`/biodatas/${r.biodata.id}`}
+                        className="text-sm font-bold text-rose-text hover:underline"
+                      >
+                        {r.biodata.biodataNo} · {t('reports.openBiodata')}
+                      </Link>
+                    )}
+                    {r.ticketId && canOpenTickets && (
+                      <Link
+                        to={`/tickets/${r.ticketId}`}
+                        className="text-sm font-bold text-rose-text hover:underline"
+                      >
+                        {t('reports.openTicket')}
+                      </Link>
+                    )}
+                  </span>
                 </div>
                 {r.details && (
                   <p className="whitespace-pre-line rounded-2xl bg-surface2 p-4 text-[15px]">{r.details}</p>
@@ -119,24 +201,19 @@ export function ReportsPage() {
           </div>
         )}
       </DataCard>
-      <PromptDialog
-        open={!!closing}
-        title={closing ? t(`reports.${closing.status === 'resolved' ? 'resolve' : 'dismiss'}`) : ''}
-        description={closing?.report.biodata?.biodataNo}
-        label={t('reports.actionTaken')}
-        required={closing?.status === 'resolved'}
-        confirmLabel={closing ? t(`reports.${closing.status === 'resolved' ? 'resolve' : 'dismiss'}`) : ''}
-        cancelLabel={t('common.cancel')}
-        loading={update.isPending}
-        error={closing && update.error && errorMessage(update.error)}
-        onConfirm={(text) =>
-          update.mutate({ id: closing.report.id, status: closing.status, actionTaken: text || undefined })
-        }
-        onClose={() => {
-          setClosing(null);
-          update.reset();
-        }}
-      />
+      {closing && (
+        <CloseReportDialog
+          report={closing.report}
+          status={closing.status}
+          loading={update.isPending}
+          error={update.error && errorMessage(update.error)}
+          onConfirm={(body) => update.mutate({ id: closing.report.id, status: closing.status, ...body })}
+          onClose={() => {
+            setClosing(null);
+            update.reset();
+          }}
+        />
+      )}
     </>
   );
 }

@@ -1,9 +1,11 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { REPORT_REASONS } from '@ghotok/shared';
 import { Button, FormMessage, Icon, Modal, SelectInput, TextArea } from '@ghotok/ui';
+import { AttachmentPicker, useAttachments } from '@/components/support/Attachments';
 import { useAuth } from '@/hooks/use-auth';
 import { useErrorMessage } from '@/hooks/use-error-message';
 import { useRequireAuth } from '@/hooks/use-require-auth';
@@ -93,21 +95,33 @@ export function BiodataActions({ biodataNo }) {
   );
 }
 
-/** "Report this biodata" link and dialog. */
+/**
+ * "Report this biodata" link and dialog. Each report opens a support ticket where
+ * the team follows up, so the member can add evidence (screenshots, recordings).
+ */
 export function ReportBiodata({ biodataNo }) {
   const { t, lang } = useT();
   const toast = useToast();
   const errorMessage = useErrorMessage();
   const requireAuth = useRequireAuth();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ reason: 'fake_info', details: '' });
+  const attachments = useAttachments();
   const report = useMutation({
-    mutationFn: () => biodataApi.report(biodataNo, form),
+    mutationFn: () =>
+      biodataApi.report(biodataNo, {
+        ...form,
+        attachments: attachments.tickets.length ? attachments.tickets : undefined,
+      }),
     onSuccess: () => {
       setOpen(false);
+      attachments.reset();
       toast.success(t('detail.reportThanks'));
+      queryClient.invalidateQueries({ queryKey: ['viewer', biodataNo] });
     },
   });
+  const existingTicket = report.error?.code === 'ALREADY_REPORTED' && report.error.details?.ticketId;
   return (
     <>
       <button
@@ -126,13 +140,27 @@ export function ReportBiodata({ biodataNo }) {
             <Button variant="ghost" onClick={() => setOpen(false)}>
               {t('common.cancel')}
             </Button>
-            <Button loading={report.isPending} onClick={() => report.mutate()}>
+            <Button
+              disabled={attachments.uploading}
+              loading={report.isPending}
+              onClick={() => report.mutate()}
+            >
               {t('detail.reportSend')}
             </Button>
           </>
         }
       >
-        <FormMessage>{report.error && errorMessage(report.error)}</FormMessage>
+        <FormMessage>
+          {report.error && errorMessage(report.error)}
+          {existingTicket && (
+            <>
+              {' '}
+              <Link href={`/dashboard/support/${existingTicket}`} className="underline">
+                {t('detail.reportOpenTicket')}
+              </Link>
+            </>
+          )}
+        </FormMessage>
         <SelectInput
           label={t('detail.reportReason')}
           value={form.reason}
@@ -145,6 +173,7 @@ export function ReportBiodata({ biodataNo }) {
           maxLength={2000}
           onChange={(e) => setForm((f) => ({ ...f, details: e.target.value }))}
         />
+        <AttachmentPicker attachments={attachments} />
       </Modal>
     </>
   );

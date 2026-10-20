@@ -11,9 +11,10 @@ import { authApi } from '@/lib/api/endpoints';
 import { validate } from '@/lib/validators';
 import { useT } from '@/providers/PreferencesProvider';
 import { AuthCard } from './AuthCard.jsx';
+import { GoogleSignIn } from './GoogleSignIn.jsx';
 import { rememberDevOtp } from './dev-otp.js';
 
-export function RegisterForm() {
+export function RegisterForm({ googleEnabled = false }) {
   const { t, lang } = useT();
   const router = useRouter();
   const setUser = useSetAuthUser();
@@ -116,6 +117,7 @@ export function RegisterForm() {
           {t('auth.register')}
         </Button>
       </form>
+      {googleEnabled && <GoogleSignIn />}
     </AuthCard>
   );
 }

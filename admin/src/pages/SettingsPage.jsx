@@ -21,6 +21,9 @@ import { useT } from '../providers/PreferencesProvider.jsx';
 const TABS = ['site', 'payments', 'stats', 'moderation'];
 const SOCIAL = ['facebook', 'youtube', 'instagram', 'whatsapp'];
 const ACCOUNT_TYPES = ['personal', 'merchant', 'agent'];
+const TUTORIALS = ['createBiodata', 'buyConnections', 'viewContact'];
+// Methods paid by hand with "Send Money"; gateway-only methods (SSLCommerz) have no number.
+const MANUAL_METHODS = PAYMENT_METHODS.filter((m) => !m.gatewayOnly);
 
 /** Returns a copy of `obj` with the value at `path` (e.g. ['bkash', 'enabled']) replaced. */
 function setIn(obj, [key, ...rest], value) {
@@ -76,20 +79,55 @@ function SettingsForm({ settingKey, initial }) {
         {SOCIAL.map((k) => (
           <TextInput key={k} label={t(`settings.${k}`)} {...field(k)} />
         ))}
+        <TextInput
+          label={t('settings.appUrl')}
+          type="url"
+          placeholder="https://play.google.com/…"
+          {...field('appUrl')}
+        />
+        <fieldset className="flex flex-col gap-4 rounded-3xl border border-line p-5 sm:col-span-2">
+          <legend className="px-2 text-[13px] font-bold text-muted">{t('settings.tutorials')}</legend>
+          {TUTORIALS.map((k) => (
+            <TextInput
+              key={k}
+              label={t(`settings.tutorial.${k}`)}
+              type="url"
+              placeholder="https://youtu.be/…"
+              {...field('tutorials', k)}
+            />
+          ))}
+        </fieldset>
       </div>
     );
   } else if (settingKey === 'payments') {
     body = (
       <>
-        <TextInput
-          label={t('settings.verificationHours')}
-          type="number"
-          min={1}
-          max={72}
-          className="max-w-xs"
-          {...field('verificationHours')}
-        />
-        {PAYMENT_METHODS.map((m) => (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <TextInput
+            label={t('settings.verificationHours')}
+            type="number"
+            min={1}
+            max={72}
+            {...field('verificationHours')}
+          />
+          <TextInput
+            label={t('settings.approvalGift')}
+            hint={t('settings.approvalGiftHint')}
+            type="number"
+            min={0}
+            max={20}
+            {...field('approvalGift')}
+          />
+          <TextInput
+            label={t('settings.approvedDiscount')}
+            hint={t('settings.approvedDiscountHint')}
+            type="number"
+            min={0}
+            max={90}
+            {...field('approvedDiscountPercent')}
+          />
+        </div>
+        {MANUAL_METHODS.map((m) => (
           <fieldset key={m.value} className="flex flex-col gap-4 rounded-3xl border border-line p-5">
             <SwitchRow
               label={t('settings.methodEnabled', { method: m[lang] })}
