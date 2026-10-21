@@ -3,7 +3,7 @@
 # /api to the API so the auth cookies stay first-party. Build from the repository root:
 #   docker build -f admin/Dockerfile --build-arg VITE_WEBSITE_URL=https://ghotok.com.bd -t ghotok-admin .
 
-FROM node:22-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY shared/package.json shared/
