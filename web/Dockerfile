@@ -2,7 +2,7 @@
 # Ghotok website (Next.js, standalone output). Build from the repository root:
 #   docker build -f web/Dockerfile --build-arg NEXT_PUBLIC_SITE_URL=https://ghotok.com.bd -t ghotok-web .
 
-FROM node:22-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY shared/package.json shared/
@@ -24,7 +24,7 @@ ENV API_URL=$API_URL \
     NEXT_TELEMETRY_DISABLED=1
 RUN npm run build -w web
 
-FROM node:22-alpine
+FROM node:26-alpine
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
