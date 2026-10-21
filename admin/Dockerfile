@@ -20,7 +20,7 @@ ARG VITE_BASE=/
 ENV VITE_WEBSITE_URL=$VITE_WEBSITE_URL VITE_BASE=$VITE_BASE
 RUN npm run build -w admin
 
-FROM nginx:1.27-alpine
+FROM nginx:1.31-alpine
 # The official image renders templates/*.template with environment variables at start-up.
 ENV API_UPSTREAM=http://api:4000
 COPY admin/nginx.conf.template /etc/nginx/templates/default.conf.template
