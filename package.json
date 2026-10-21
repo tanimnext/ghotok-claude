@@ -34,7 +34,7 @@
     "@eslint/js": "^9.39.5",
     "@next/eslint-plugin-next": "^16.4.2",
     "concurrently": "^10.0.6",
-    "eslint": "^9.39.5",
+    "eslint": "^10.13.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
