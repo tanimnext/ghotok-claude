@@ -61,5 +61,5 @@ First complete release.
 - Documentation: README, architecture, API reference, deployment guide, contributing guide and
   decision records.
 
-[Unreleased]: https://github.com/tanimnext/ghotok/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/tanimnext/ghotok/releases/tag/v1.0.0
+[Unreleased]: https://github.com/tanimnext/ghotok-claude/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/tanimnext/ghotok-claude/releases/tag/v1.0.0
